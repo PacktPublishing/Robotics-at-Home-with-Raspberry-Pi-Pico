@@ -3,7 +3,6 @@ Then turn the wheel slowly to see the change"""
 import board
 import rp2pio
 import adafruit_pioasm
-import time
 
 pio_input = """
 .program pio_input
