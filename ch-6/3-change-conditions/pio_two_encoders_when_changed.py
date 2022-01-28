@@ -3,8 +3,9 @@ Then turn the wheel slowly to see the change"""
 import board
 import rp2pio
 import adafruit_pioasm
+import array
 
-pio_input = """
+program = """
 .program pio_input    
     set y, 0            ; clear y
 read:
@@ -20,22 +21,37 @@ different:
     jmp read            ; loop back
 """
 
-assembled = adafruit_pioasm.assemble(pio_input)
+assembled = adafruit_pioasm.assemble(program)
 
 ## set up a statemachine
-sm = rp2pio.StateMachine(
+left_enc = rp2pio.StateMachine(
     assembled,
-    frequency=2000,
+    frequency=0,
     first_in_pin=board.GP20,
     in_pin_count=2
 )
 
-buffer = bytearray(1) # an array of bytes to read into - we are just asking for a byte (are we though? It might be 4 bytes)
+right_enc = rp2pio.StateMachine(
+    assembled,
+    frequency=0,
+    first_in_pin=board.GP26,
+    in_pin_count=2
+) 
+
+buffer = array.array('I', [0])
+
+left_data = 0
+right_data = 0
 
 while True:
-    # read data from the fifo
-    # print (sm.in_waiting)
-    if sm.in_waiting:
-        data = sm.readinto(buffer)
+    # read data from the fifo   
+    if left_enc.in_waiting:
+        left_enc.readinto(buffer)
+        left_data = buffer[0]
         # print it.
-        print("{:08b}".format(buffer[0]))
+        print("{:08b}   {:08b}".format(left_data, right_data))
+    if right_enc.in_waiting:
+        right_enc.readinto(buffer)
+        right_data = buffer[0]
+        # print it.
+        print("{:08b}   {:08b}".format(left_data, right_data))

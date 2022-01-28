@@ -19,7 +19,7 @@ sm = rp2pio.StateMachine(
 print("real frequency", sm.frequency)
 
 while True:
-    sm.write(bytes((1,)))
+    sm.write(bytes([1]))
     time.sleep(0.5)
-    sm.write(bytes((0,)))
+    sm.write(bytes([0]))
     time.sleep(0.5)
