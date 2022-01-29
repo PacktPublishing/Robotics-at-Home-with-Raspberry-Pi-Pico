@@ -23,4 +23,4 @@ buffer = array.array('I', [0])
 
 # read the data
 sm.readinto(buffer)
-print("{0} 0b{0:08b}".format(buffer[0]))
+print("{0} 0b{0:032b}".format(buffer[0]))
