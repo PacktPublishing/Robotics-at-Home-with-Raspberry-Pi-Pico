@@ -21,25 +21,38 @@
     ]
   }
 
-  function move_robot(point) {
-    d3.json("/control", {
-      method:"POST",
-      body: JSON.stringify({
-        "move": point
-      }),
-      headers: {
-          "Content-type": "application/json; charset=UTF-8"
-      }
-    });
+  var last_position = [0, 0];
+  var new_position = false;
+
+  function move_robot() {
+    if (new_position === true) {
+      d3.json("/control", {
+        method:"POST",
+        body: JSON.stringify(last_position),
+        headers: {
+            "Content-type": "application/json; charset=UTF-8"
+        }
+      }).finally(function() {
+        setTimeout(move_robot, 10) // continue the lop 50 ms after a response, even a non-positive one.
+      });
+      new_position = false;
+    }
+    else {
+      setTimeout(move_robot, 10); // continue the loop if there's nothing to send
+    }
   }
 
   function stop() {
-    move_robot([0, 0]);
+    last_position = [0, 0];
+    new_position = true;
   }
+
+  setTimeout(move_robot, 50); // start the control loop
 
   circle.on("pointermove", function() {
       if(d3.event.buttons == 1) {
-        move_robot(circle_to_relative(d3.mouse(this)));
+        last_position = circle_to_relative(d3.mouse(this));
+        new_position = true;
       }
     })
     .on("mouseup", stop)

@@ -11,7 +11,9 @@
       .attr("y", 20)
       .text("--");
     
-    d3.json("sensors").then(function(data) {
-      d3.select("#left_dist").text(data['left_distance'])  
-    });
+    setInterval(function() {
+      d3.json("sensors").then(function(data) {
+        d3.select("#left_dist").text(data['left_distance'])  
+      });
+    }, 300);
 </script>

@@ -1,9 +1,3 @@
-# .deploy/send-it.sh \
-#   ch-9/3-sensors/sensor_remote.py \
-#   ch-9/3-sensors/robot_wifi.py \
-#   ch-9/3-sensors/robot.py \
-#   ch-9/3-sensors/pio_encoder.py \
-#   ch-9/3-sensors/sensor.html
 import json
 
 from adafruit_esp32spi import adafruit_esp32spi_wsgiserver
@@ -18,7 +12,7 @@ app = WSGIApp()
 def index(request):
   with open("sensor.html") as fd:
     hello_html = fd.read()
-  return 200, [('Content-Type',"text/html")], hello_html
+  return 200, [('Content-Type',"text/html")], [hello_html]
 
 @app.route("/sensors")
 def sensors(request):
@@ -27,7 +21,7 @@ def sensors(request):
   }
   robot.left_distance.clear_interrupt()
 
-  return 200, [('Content-Type', 'application/json')], json.dumps({sensor_data})
+  return 200, [('Content-Type', 'application/json')], [json.dumps(sensor_data)]
 
 print("Setting up wifi.")
 wifi, esp = robot_wifi.connect_to_wifi()
@@ -49,13 +43,15 @@ ip_int = ".".join(str(int(n)) for n in esp.ip_address)
 print(f"IP Address is {ip_int}")
 while True:
     try:
-        server.update_poll()
+        try:
+          server.update_poll()
+        except RuntimeError as e:
+          print(f"Server poll error: {type(e)}, {e}")
         # background task
     except:
         print("Shutting down wifi on failure. resetting ESP")
         wifi.reset()
         raise
-
 # Reader exercise
 # add the right distance to the distance sensor remote. Consider where to position the meter for this, how to return both sensors in 
 # the sensors call. Don't forget to clear the interrupt to get new readings.
