@@ -12,5 +12,5 @@ for file in "${FILES[@]}"; do
 done
 
 for folder in "${FOLDERS[@]}"; do
- rsync -rv "${LIBRARY_SRC}/lib/${folder}" "${DEST}/lib/${folder}"
+ rsync -rv "${LIBRARY_SRC}/lib/${folder}/" "${DEST}/lib/${folder}/"
 done
