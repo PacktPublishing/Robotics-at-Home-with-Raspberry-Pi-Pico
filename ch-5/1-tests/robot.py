@@ -12,6 +12,7 @@ motor_A2.direction = digitalio.Direction.OUTPUT
 motor_B1.direction = digitalio.Direction.OUTPUT
 motor_B2.direction = digitalio.Direction.OUTPUT
 
+
 def stop():
     motor_A1.value = False
     motor_A2.value = False
