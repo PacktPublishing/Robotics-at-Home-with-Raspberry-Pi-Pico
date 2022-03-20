@@ -4,52 +4,57 @@ import requests
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-url = 'http://192.168.1.128'
+url = "http://192.168.1.128"
 
 
 class SensorStream:
-  def __init__(self) -> None:
-      self.reset()
+    def __init__(self) -> None:
+        self.reset()
 
-  def reset(self):
-      self.error_values = []
-      self.pid_outputs = []
-      self.times = []
+    def reset(self):
+        self.error_values = []
+        self.pid_outputs = []
+        self.times = []
 
-  def sensor_stream(self, frame):
-    try:
-      response = requests.get(url, timeout=1)
-    except (requests.exceptions.ConnectTimeout, requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
-      print("Waiting...")
-      return
-    print(f"Content: {response.content}")
-    print(f"status: {response.status_code}")
+    def sensor_stream(self, frame):
+        try:
+            response = requests.get(url, timeout=1)
+        except (
+            requests.exceptions.ConnectTimeout,
+            requests.exceptions.ReadTimeout,
+            requests.exceptions.ConnectionError,
+        ):
+            print("Waiting...")
+            return
+        print(f"Content: {response.content}")
+        print(f"status: {response.status_code}")
 
-    item = response.json()
-    
-    print(f"Received: {item}")
-    if self.times and item['time'] < self.times[-1]:
-      self.reset()
-    self.times.append(item['time'])
-    self.error_values.append(item['last_value'])
-    self.pid_outputs.append(item['pid_output'])
+        item = response.json()
 
-    if len(self.times) > 100:
-        self.times = self.times[-100:]
-        self.error_values = self.error_values[-100:]
-        self.pid_outputs = self.pid_outputs[-100:]
+        print(f"Received: {item}")
+        if self.times and item["time"] < self.times[-1]:
+            self.reset()
+        self.times.append(item["time"])
+        self.error_values.append(item["last_value"])
+        self.pid_outputs.append(item["pid_output"])
 
-    plt.cla() # clear axes.
-    # plot the items
-    plt.plot(self.times, self.error_values, label="error")
-    plt.plot(self.times, self.pid_outputs, label="pid")
-    
-    plt.legend(loc='upper right')
+        if len(self.times) > 100:
+            self.times = self.times[-100:]
+            self.error_values = self.error_values[-100:]
+            self.pid_outputs = self.pid_outputs[-100:]
 
-  def start(self):
-    # Create the animation. GFC - get current figure. random_stream - callback func.
-    self.ani = FuncAnimation(plt.gcf(), self.sensor_stream, interval=200)
-    plt.tight_layout()
-    plt.show()
+        plt.cla()  # clear axes.
+        # plot the items
+        plt.plot(self.times, self.error_values, label="error")
+        plt.plot(self.times, self.pid_outputs, label="pid")
+
+        plt.legend(loc="upper right")
+
+    def start(self):
+        # Create the animation. GFC - get current figure. random_stream - callback func.
+        self.ani = FuncAnimation(plt.gcf(), self.sensor_stream, interval=200)
+        plt.tight_layout()
+        plt.show()
+
 
 SensorStream().start()
