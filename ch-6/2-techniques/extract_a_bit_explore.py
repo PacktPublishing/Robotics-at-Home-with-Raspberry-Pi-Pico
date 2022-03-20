@@ -5,6 +5,7 @@ import rp2pio
 import adafruit_pioasm
 import array
 
+
 def scenario(test_data, bit_to_extract, expected):
     program = f"""
     .program extract_bit    
@@ -41,7 +42,7 @@ def scenario(test_data, bit_to_extract, expected):
         assembled,
         frequency=2000,
     ) as sm:
-        buffer = array.array('I', [0])
+        buffer = array.array("I", [0])
 
         print("source bits: {0} 0b{0:032b} 0x{0:x}".format(test_data))
         sm.readinto(buffer)
@@ -54,6 +55,7 @@ def scenario(test_data, bit_to_extract, expected):
             print("Didn't get what I expected")
             print("Y bit expected:  {0} 0b{0:032b} 0x{0:x}".format(expected))
         print("")
+
 
 def pull_scenario(test_data, bit_to_extract, expected):
     program = f"""
@@ -92,8 +94,8 @@ def pull_scenario(test_data, bit_to_extract, expected):
         assembled,
         frequency=2000,
     ) as sm:
-        sm.write(array.array('I', [test_data]))
-        buffer = array.array('I', [0])
+        sm.write(array.array("I", [test_data]))
+        buffer = array.array("I", [0])
 
         print("source bits: {0} 0b{0:032b} 0x{0:x}".format(test_data))
         sm.readinto(buffer)
@@ -105,7 +107,8 @@ def pull_scenario(test_data, bit_to_extract, expected):
         if buffer[0] != expected:
             print("Didn't get what I expected")
             print("Y bit expected:  {0} 0b{0:032b} 0x{0:x}".format(expected))
-        print("")    
+        print("")
+
 
 scenario(0b101, 1, 0)
 scenario(0b110, 1, 1)
@@ -126,4 +129,3 @@ pull_scenario(0b10111000_00000000_00000000_00000000, 30, 0)
 #               v
 pull_scenario(0b10111000_00000000_00000000_00000000, 31, 1)
 pull_scenario(0b01111000_00000000_00000000_00000000, 31, 0)
-

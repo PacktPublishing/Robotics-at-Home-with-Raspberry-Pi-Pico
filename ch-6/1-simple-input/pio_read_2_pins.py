@@ -15,13 +15,10 @@ assembled = adafruit_pioasm.assemble(pio_input)
 
 ## set up a statemachine
 sm = rp2pio.StateMachine(
-    assembled,
-    frequency=2000,
-    first_in_pin=board.GP20,
-    in_pin_count=2
+    assembled, frequency=2000, first_in_pin=board.GP20, in_pin_count=2
 )
 
-buffer = bytearray(1) # an array of bytes to read into - we are just asking for a byte
+buffer = bytearray(1)  # an array of bytes to read into - we are just asking for a byte
 
 while True:
     # read data from the fifo

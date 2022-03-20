@@ -59,28 +59,20 @@ assembled = adafruit_pioasm.assemble(program)
 
 ## set up a statemachine
 left_enc = rp2pio.StateMachine(
-    assembled,
-    frequency=0,
-    first_in_pin=board.GP20,
-    jmp_pin=board.GP21,
-    in_pin_count=2
+    assembled, frequency=0, first_in_pin=board.GP20, jmp_pin=board.GP21, in_pin_count=2
 )
 
 right_enc = rp2pio.StateMachine(
-    assembled,
-    frequency=0,
-    first_in_pin=board.GP26,
-    jmp_pin=board.GP27,
-    in_pin_count=2
-) 
+    assembled, frequency=0, first_in_pin=board.GP26, jmp_pin=board.GP27, in_pin_count=2
+)
 
-buffer = array.array('i', [0])
+buffer = array.array("i", [0])
 
 left_data = 0
 right_data = 0
 
 while True:
-    # read data from the fifo   
+    # read data from the fifo
     if left_enc.in_waiting:
         left_enc.readinto(buffer)
         left_data = buffer[0]

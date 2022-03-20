@@ -12,13 +12,13 @@ last_y = 0
 
 print("Entering main loop")
 while True:
-  x = robot.left_encoder.read()
-  y = robot.right_encoder.read()
+    x = robot.left_encoder.read()
+    y = robot.right_encoder.read()
 
-  x_diff = x - last_x
-  y_diff = y - last_y
+    x_diff = x - last_x
+    y_diff = y - last_y
 
-  last_x = x
-  last_y = y
+    last_x = x
+    last_y = y
 
-  mouse.move(x=x_diff, y=y_diff)
+    mouse.move(x=x_diff, y=y_diff)

@@ -28,7 +28,7 @@ sm = rp2pio.StateMachine(
     frequency=2000,
 )
 
-buffer = array.array('I', [0])
+buffer = array.array("I", [0])
 
 # read the data
 sm.readinto(buffer)

@@ -25,13 +25,10 @@ assembled = adafruit_pioasm.assemble(program)
 
 ## set up a statemachine
 sm = rp2pio.StateMachine(
-    assembled,
-    frequency=20000,
-    first_in_pin=board.GP20,
-    in_pin_count=2
+    assembled, frequency=20000, first_in_pin=board.GP20, in_pin_count=2
 )
 
-buffer = array.array('I', [0])
+buffer = array.array("I", [0])
 
 while True:
     sm.readinto(buffer)

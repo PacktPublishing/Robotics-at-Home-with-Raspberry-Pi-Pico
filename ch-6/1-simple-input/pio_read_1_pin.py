@@ -14,13 +14,9 @@ pio_input = """
 
 assembled = adafruit_pioasm.assemble(pio_input)
 
-sm = rp2pio.StateMachine(
-    assembled,
-    frequency=2000,
-    first_in_pin=board.GP20
-)
+sm = rp2pio.StateMachine(assembled, frequency=2000, first_in_pin=board.GP20)
 
-buffer = array.array('I', [0])
+buffer = array.array("I", [0])
 
 while True:
     # read data from the fifo

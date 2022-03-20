@@ -30,14 +30,12 @@ sm = rp2pio.StateMachine(
 )
 
 
-buffer = array.array('I', [0])
+buffer = array.array("I", [0])
 
-sm.write(array.array('I', [0b01101000_00000000_00000000_00000000]))
+sm.write(array.array("I", [0b01101000_00000000_00000000_00000000]))
 # read the data
 sm.readinto(buffer)
 print("Initial Y: {0} 0b{0:032b} 0x{0:x}".format(buffer[0]))
 
 sm.readinto(buffer)
 print("Y bit extracted:  {0} 0b{0:032b} 0x{0:x}".format(buffer[0]))
-
-

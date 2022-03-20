@@ -19,7 +19,7 @@ assembled = adafruit_pioasm.assemble(program)
 ## set up a statemachine
 sm = rp2pio.StateMachine(assembled, frequency=2000)
 
-buffer = array.array('I', [0])
+buffer = array.array("I", [0])
 
 # read the data
 sm.readinto(buffer)
