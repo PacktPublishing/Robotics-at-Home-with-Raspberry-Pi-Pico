@@ -1,3 +1,6 @@
+from black import err
+
+
 class PID:
   def __init__(self, proportional_k, integral_k, differential_k, set_point):
     self.proportional_k = proportional_k    
@@ -10,12 +13,13 @@ class PID:
     self.min_output = -1
     self.max_output = 1
 
+    self.dead_zone = 0.3
 
   def update(self, measurement, time_delta):
     error_value = measurement - self.set_point
     proportional = error_value * self.proportional_k
 
-    # calculate integral   
+    # calculate integral
     self.error_sum += error_value * time_delta
     # clamp it
     self.error_sum = min(self.max_output, self.error_sum)
@@ -25,10 +29,14 @@ class PID:
 
     differentiated_error = (error_value - self.last_value) / time_delta
     differential = differentiated_error * self.differential_k
+    self.last_value = error_value
 
     output = proportional + integral + differential
     # clamp output
-    output = min(self.max_output, output)
-    output = max(self.min_output, output)
+    if abs(output) < self.dead_zone:
+      output = 0
+    else:
+      output = min(self.max_output, output)
+      output = max(self.min_output, output)
 
     return output

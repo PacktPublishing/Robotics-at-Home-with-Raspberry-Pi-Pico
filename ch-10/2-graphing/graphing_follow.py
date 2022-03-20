@@ -4,15 +4,15 @@ import json
 from adafruit_esp32spi import adafruit_esp32spi_wsgiserver
 from adafruit_wsgi.wsgi_app import WSGIApp
 
-import pid
 import robot
 import robot_wifi
+import pid
 
 
-class FollowApp:
-  def __init__(self) -> None:    
+class FollowObject:
+  def __init__(self):
     self.max_speed = 0.9
-    self.follow_pid = pid.PID(0.1, 0.1, 0.015)
+    self.follow_pid = pid.PID(0.1, 0.1, 0.015, 15)
     self.wifi = None
     self.server = None
 
@@ -38,10 +38,9 @@ class FollowApp:
     print(f"IP Address is {ip_int}")
 
   def index(self, request):
-    print("Handling request")
     return 200, [('Content-Type', 'application/json')], [json.dumps(
       {
-        "last_value": self.pid.last_value,
+        "last_value": self.follow_pid.last_value,
         "pid_output": self.pid_output,
         "time": self.last_time
       }
@@ -59,12 +58,9 @@ class FollowApp:
 
       # get speeds from pid
       self.pid_output = self.follow_pid.update(self.left_dist, time_delta)
-      speed = min(self.max_speed, self.pid_output)
-      speed = max(-self.max_speed, speed)
+      speed = self.pid_output * self.max_speed
 
       # make movements
-      if abs(speed) < 0.3:
-        speed = 0
       robot.set_left(speed)
       robot.set_right(speed)
 
@@ -98,4 +94,4 @@ class FollowApp:
       robot.left_distance.clear_interrupt()
       robot.left_distance.stop_ranging()
 
-FollowApp().start()
+FollowObject().start()
