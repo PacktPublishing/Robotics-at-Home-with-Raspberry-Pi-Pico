@@ -17,7 +17,11 @@ class SensorStream:
       self.times = []
 
   def sensor_stream(self, frame):
-    response = requests.get(url, timeout=1)
+    try:
+      response = requests.get(url, timeout=1)
+    except (requests.exceptions.ConnectTimeout, requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
+      print("Waiting...")
+      return
     print(f"Content: {response.content}")
     print(f"status: {response.status_code}")
 
