@@ -5,10 +5,10 @@ from adafruit_esp32spi import adafruit_esp32spi
 from adafruit_esp32spi import adafruit_esp32spi_wifimanager
 
 try:
- from secrets import secrets
+    from secrets import secrets
 except ImportError:
- print("WiFi secrets are kept in secrets.py, please add them there!")
- raise
+    print("WiFi secrets are kept in secrets.py, please add them there!")
+    raise
 
 esp32_cs = DigitalInOut(board.GP10)
 esp32_ready = DigitalInOut(board.GP9)
@@ -24,9 +24,9 @@ wifi = adafruit_esp32spi_wifimanager.ESPSPI_WiFiManager(esp, secrets)
 status_led.value = 1
 print("Connected. Making connection")
 try:
-  response = wifi.get("https://api.ipify.org")
-  print(response.text)
+    response = wifi.get("https://api.ipify.org")
+    print(response.text)
 except:
-  status_led.value = 0
-  wifi.reset()
-  raise
+    status_led.value = 0
+    wifi.reset()
+    raise

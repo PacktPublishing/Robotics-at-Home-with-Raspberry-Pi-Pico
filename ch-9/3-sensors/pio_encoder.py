@@ -54,24 +54,24 @@ send:
 
 assembled = adafruit_pioasm.assemble(program)
 
-class QuadratureEncoder:
-  def __init__(self, first_pin, second_pin, reversed=False):
-    """Encoder with 2 pins. Must use sequential pins on the board"""
-    self.sm = rp2pio.StateMachine(
-        assembled,
-        frequency=0,
-        first_in_pin=first_pin,
-        jmp_pin=second_pin,
-        in_pin_count=2
-    )
-    self.reversed = reversed
-    self._buffer = array.array('i', [0])
 
-  def read(self):
-    while self.sm.in_waiting:
-      self.sm.readinto(self._buffer)
-    if self.reversed:
-      return -self._buffer[0]
-    else:
-      return self._buffer[0]
- 
+class QuadratureEncoder:
+    def __init__(self, first_pin, second_pin, reversed=False):
+        """Encoder with 2 pins. Must use sequential pins on the board"""
+        self.sm = rp2pio.StateMachine(
+            assembled,
+            frequency=0,
+            first_in_pin=first_pin,
+            jmp_pin=second_pin,
+            in_pin_count=2,
+        )
+        self.reversed = reversed
+        self._buffer = array.array("i", [0])
+
+    def read(self):
+        while self.sm.in_waiting:
+            self.sm.readinto(self._buffer)
+        if self.reversed:
+            return -self._buffer[0]
+        else:
+            return self._buffer[0]

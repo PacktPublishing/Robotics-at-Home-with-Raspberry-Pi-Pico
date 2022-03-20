@@ -5,16 +5,15 @@ from adafruit_wsgi.wsgi_app import WSGIApp
 
 app = WSGIApp()
 
+
 @app.route("/")
 def index(request):
-  return 200, [], "Hello world!"
+    return 200, [], "Hello world!"
+
 
 print("Setting up wifi.")
 wifi, esp = robot_wifi.connect_to_wifi()
-server = adafruit_esp32spi_wsgiserver.WSGIServer(
-  80,
-  application=app 
-)
+server = adafruit_esp32spi_wsgiserver.WSGIServer(80, application=app)
 adafruit_esp32spi_wsgiserver.set_interface(esp)
 
 print("Starting server")
