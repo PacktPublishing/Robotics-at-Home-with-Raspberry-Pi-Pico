@@ -1,5 +1,6 @@
 import time
 import json
+import traceback
 
 from adafruit_esp32spi import adafruit_esp32spi_wsgiserver
 from adafruit_wsgi.wsgi_app import WSGIApp
@@ -16,8 +17,10 @@ class RandomWalkSensors:
 
         self.start_time = time.monotonic()
         self.last_time = self.start_time
+        # self.app = None
 
     def setup_wifi(self, app):
+        # self.app = app
         print("Setting up wifi.")
         self.wifi, esp = robot_wifi.connect_to_wifi()
         self.server = adafruit_esp32spi_wsgiserver.WSGIServer(80, application=app)
@@ -27,6 +30,10 @@ class RandomWalkSensors:
         self.server.start()
         ip_int = ".".join(str(int(n)) for n in esp.ip_address)
         print(f"IP Address is {ip_int}")
+
+    def reconnect(self):
+        self.wifi.connect()
+        self.server.start()
 
     def data(self, request):
 
@@ -66,9 +73,9 @@ class RandomWalkSensors:
                 self.update()
                 self.server.update_poll()
             except RuntimeError as e:
-                print(f"Server poll error: {type(e)}, {e}")
-                print(f"Resetting ESP...")
+                traceback.print_exception(BaseException, e, e.__traceback__)
                 self.wifi.reset()
+                self.reconnect()
                 print("Reset complete.")
 
     def start(self):
