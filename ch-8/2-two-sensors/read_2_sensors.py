@@ -7,8 +7,8 @@ i2c0 = busio.I2C(sda=board.GP0, scl=board.GP1)
 i2c1 = busio.I2C(sda=board.GP2, scl=board.GP3)
 
 ## If you accidentally pass the same bus twice, you'll get the same measurements
-vl53_r = adafruit_vl53l1x.VL53L1X(i2c0)
-vl53_l = adafruit_vl53l1x.VL53L1X(i2c1)
+vl53_l = adafruit_vl53l1x.VL53L1X(i2c0)
+vl53_r = adafruit_vl53l1x.VL53L1X(i2c1)
 
 
 # we want it short range
