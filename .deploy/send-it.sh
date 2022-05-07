@@ -19,7 +19,7 @@ cp "${source}" "${DEST}/${sourcebase}"
 # make a code.py
 echo "import ${module}" >"${DEST}/code.py"
 
-if [ -n "${support_files[*]}" ]; then
+if [ -n "${support_files[*]:-}" ]; then
   for file in "${support_files[@]}"; do
     cp "$file" "${DEST}/$(basename "${file}")"
   done
