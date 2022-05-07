@@ -20,7 +20,7 @@ try:
             left_dist = robot.left_distance.distance
             right_dist = robot.right_distance.distance
             # are any too close
-            if right_dist < too_close_cm:
+            if 0 < right_dist < too_close_cm:
                 print(
                     "Obstacle detected - Left: {} cm, Right: {} cm".format(
                         left_dist, right_dist
@@ -29,7 +29,7 @@ try:
                 robot.set_left(-speed)
             else:
                 robot.set_left(speed)
-                if left_dist < too_close_cm:
+                if 0 < left_dist < too_close_cm:
                     print(
                         "Obstacle detected - Left: {} cm, Right: {} cm".format(
                             left_dist, right_dist
