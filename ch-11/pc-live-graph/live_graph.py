@@ -1,5 +1,6 @@
 """ Turn JSON data stream into graphs"""
 import requests
+import json
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -12,22 +13,27 @@ class AnimatedGraph:
         self.fields = {}
         self.samples = 100
         self.reset()
+        print("getting source to iterate over")
+        self.source = self._graph_source()
+        print("init completed")
 
     def reset(self):
         for field in self.fields:
             self.fields[field] = []
 
+    def _graph_source(self):
+        while True:
+            try:
+                with requests.get(url, timeout=1, stream=True) as response:
+                    print(f"status: {response.status_code}")
+                    yield from response.iter_lines()
+            except requests.exceptions.RequestException:
+                pass
+
     def make_frame(self, frame):
-        try:
-            response = requests.get(url, timeout=1)
-        except requests.exceptions.RequestException:
-            print("Waiting...")
-            return
-        print(f"Content: {response.content}")
-        print(f"status: {response.status_code}")
-
-        item = response.json()
-
+        print("loading next item")
+        item = json.loads(next(self.source))
+        print("item loaded")
         if 'time' in self.fields and item["time"] < self.fields['time'][-1]:
             self.reset()
         for field in item:

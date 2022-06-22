@@ -19,8 +19,8 @@ left_encoder = pio_encoder.QuadratureEncoder(board.GP26, board.GP27)
 i2c0 = busio.I2C(sda=board.GP0, scl=board.GP1)
 i2c1 = busio.I2C(sda=board.GP2, scl=board.GP3)
 
-right_distance = adafruit_vl53l1x.VL53L1X(i2c0)
-left_distance = adafruit_vl53l1x.VL53L1X(i2c1)
+left_distance = adafruit_vl53l1x.VL53L1X(i2c0)
+right_distance = adafruit_vl53l1x.VL53L1X(i2c1)
 
 
 def stop():

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<h1>Counting test</h1>
+<p>Counter: <span id="counter"> </span></p>
+
+<script type="module">
+  import * as d3_module from "https://cdn.jsdelivr.net/npm/d3@7";
+  var count_output = d3.select("span#counter");
+  
+  setInterval(function() {
+    d3.json("count").then(function(data) {
+      count_output.text(data)  
+    });
+  }, 300);
+</script>
