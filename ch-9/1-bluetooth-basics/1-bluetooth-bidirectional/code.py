@@ -1,11 +1,6 @@
 import board 
-from digitalio import DigitalInOut
-import time
 import busio
 import supervisor
-
-led = DigitalInOut(board.LED)
-led.switch_to_output()
 
 # PICO UART pins? What am i not using?
 uart = busio.UART(board.GP12,board.GP13,baudrate=9600, timeout=0.01)
