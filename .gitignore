@@ -4,3 +4,4 @@
 .vscode
 *.FCStd1
 secrets.py
+libs
