@@ -9,22 +9,28 @@ import robot_wifi
 import pid
 
 
-class FollowObject:
+class AllSensorsApp:
     def __init__(self):
-        self.max_speed = 0.7
-        self.follow_pid = pid.PID(0.1, 0.1, 0.015, 15)
         self.wifi = None
         self.server = None
 
-        self.last_time = time.monotonic()
+        self.intended_speed = 0.9
+        self.speed_to_encoder_factor = 1/5000
+        self.left_speed_pid = pid.PID(0, -0.7, 0, self.intended_speed)
+        self.right_speed_pid = pid.PID(0, -0.7, 0, self.intended_speed)
+        self.start_time = time.monotonic()
+        self.last_time = self.start_time
+
         self.left_dist = 0
         self.right_dist = 0
-        self.pid_output = 0
+        self.left_pid_output = 0
+        self.right_pid_output = 0
         self.left_speed = 0
         self.right_speed = 0
 
-    def setup_robot(self):
-        robot.left_distance.distance_mode = 1
+    # def setup_robot(self):
+    #     robot.left_distance.distance_mode = 1
+    #     robot.right_distance.distance_mode = 1
 
     def setup_wifi(self, app):
         print("Setting up wifi.")
@@ -46,14 +52,14 @@ class FollowObject:
             [
                 json.dumps(
                     {
-                        "last_value": self.follow_pid.last_value,
-                        "pid_output": self.pid_output,
+                        "left_speed_pid": self.left_pid_output,
+                        "right_speed_pid": self.right_pid_output,
                         "imu_z": imu_data[2],
                         "left_speed": self.left_speed,
                         "right_speed": self.right_speed,
                         "left_distance": self.left_dist,
                         "right_distance": self.right_dist,
-                        "time": self.last_time,
+                        "time": self.last_time - self.start_time,
                     }
                 )
             ],
@@ -65,33 +71,32 @@ class FollowObject:
             return 200, [("Content-Type", "text/html")], [fd.read()]
             
     def movement_update(self):
-        # do we have data
-        if robot.left_distance.data_ready:
-            self.left_dist = robot.left_distance.distance
-            self.right_dist = robot.right_distance.distance
+        # calculate time delta
+        new_time = time.monotonic()
+        time_delta = new_time - self.last_time
+        self.last_time = new_time
 
-            # calculate time delta
-            new_time = time.monotonic()
-            time_delta = new_time - self.last_time
-            self.last_time = new_time
+        self.left_speed = robot.left_encoder.get_speed(time_delta) * self.speed_to_encoder_factor
+        self.right_speed = robot.right_encoder.get_speed(time_delta) * self.speed_to_encoder_factor
 
-            # get speeds from pid
-            self.pid_output = self.follow_pid.update(self.left_dist, time_delta)
-            speed = self.pid_output * self.max_speed
+        self.left_pid_output = self.left_speed_pid.update(self.left_speed, time_delta)
+        self.right_pid_output = self.right_speed_pid.update(self.right_speed, time_delta)
+        
+        # robot.set_left(self.left_pid_output)
+        # robot.set_right(self.right_pid_output)
 
-            self.left_speed = robot.left_encoder.get_speed(time_delta)
-            self.right_speed = robot.right_encoder.get_speed(time_delta)
+        # # do we have data
+        # if robot.left_distance.data_ready:
+        #     self.left_dist = robot.left_distance.distance
+        #     self.right_dist = robot.right_distance.distance
 
-            # make movements
-            robot.set_left(speed)
-            robot.set_right(speed)
-
-            # reset and loop
-            robot.left_distance.clear_interrupt()
-            robot.right_distance.clear_interrupt()
+        #     # reset and loop
+        #     robot.left_distance.clear_interrupt()
+        #     robot.right_distance.clear_interrupt()
 
     def main_loop(self):
-        robot.left_distance.start_ranging()
+        # robot.left_distance.start_ranging()
+        # robot.right_distance.start_ranging()
         while True:
             try:
                 self.movement_update()
@@ -109,13 +114,15 @@ class FollowObject:
         app.route("/data")(self.data)
         print("Starting")
         try:
-            self.setup_robot()
+            # self.setup_robot()
             self.setup_wifi(app)
             self.main_loop()
         finally:
             robot.stop()
-            robot.left_distance.clear_interrupt()
-            robot.left_distance.stop_ranging()
+            # robot.left_distance.clear_interrupt()
+            # robot.left_distance.stop_ranging()
+            # robot.right_distance.clear_interrupt()
+            # robot.right_distance.stop_ranging()
 
 
-FollowObject().start()
+AllSensorsApp().start()

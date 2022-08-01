@@ -42,6 +42,8 @@
         marks: [
           Plot.line(current_dataset, {x: "time", y: "left_speed", stroke: "red"}),
           Plot.line(current_dataset, {x: "time", y: "right_speed", stroke: "blue"}),
+          Plot.line(current_dataset, {x: "time", y: "left_speed_pid", stroke: "orange"}),
+          Plot.line(current_dataset, {x: "time", y: "right_speed_pid", stroke: "green"}),
         ]
       });
       var graphNode = document.getElementById("speed");

@@ -18,14 +18,21 @@ def connect_to_wifi():
 
     status_led = DigitalInOut(board.LED)
     status_led.switch_to_output()
-
-
+    print("Setting up wifi.")
     spi = busio.SPI(board.GP14, MOSI=board.GP11, MISO=board.GP12)
-    esp = adafruit_esp32spi.ESP_SPIcontrol(spi, esp32_cs, esp32_ready, esp32_reset)
-    esp.reset()
+    print("SPI Configure")
+    esp = adafruit_esp32spi.ESP_SPIcontrol(spi, esp32_cs, esp32_ready, esp32_reset,
+        baudrate=300*1000
+    )
+    esp.ready_timeout = 1
+
+    print("Firmware vers.", esp.firmware_version)
+
     wifi = adafruit_esp32spi_wifimanager.ESPSPI_WiFiManager(esp, secrets)
     wifi.connect()
+    ip_int = ".".join(str(int(n)) for n in esp.ip_address)
+    print(f"IP Address is {ip_int}")
 
     status_led.value = 1
 
-    return wifi, esp
+    return wifi, esp, spi

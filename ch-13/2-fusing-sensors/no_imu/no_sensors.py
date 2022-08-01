@@ -19,21 +19,20 @@ class RandomWalkSensors:
         self.last_time = self.start_time
         # self.app = None
 
-    def setup_wifi(self, app):
-        # self.app = app
-        print("Setting up wifi.")
-        self.wifi, esp = robot_wifi.connect_to_wifi()
+    def setup_server(self, esp, app):
         self.server = adafruit_esp32spi_wsgiserver.WSGIServer(80, application=app)
         adafruit_esp32spi_wsgiserver.set_interface(esp)
         print("Starting server")
-
         self.server.start()
-        ip_int = ".".join(str(int(n)) for n in esp.ip_address)
-        print(f"IP Address is {ip_int}")
 
     def reconnect(self):
+        print(f"{time.monotonic()}  Resetting esp... ")
+        self.wifi.reset()
+        print(f"{time.monotonic()}  Reconnecting wifi... ")
         self.wifi.connect()
+        print(f"{time.monotonic()}  starting server...")
         self.server.start()
+        print(f"{time.monotonic()}  started server...")
 
     def data(self, request):
 
@@ -74,17 +73,21 @@ class RandomWalkSensors:
                 self.server.update_poll()
             except RuntimeError as e:
                 traceback.print_exception(BaseException, e, e.__traceback__)
-                self.wifi.reset()
-                self.reconnect()
-                print("Reset complete.")
+                if not "Failed to send" in str(e):
+                    self.reconnect()
 
     def start(self):
         app = WSGIApp()
         app.route("/")(self.index)
         app.route("/data")(self.data)
         print("Starting")
-        self.setup_wifi(app)
-        self.main_loop()
+        self.wifi, esp, spi = robot_wifi.connect_to_wifi()
+        try:
+            self.setup_server(esp, app)
+            self.main_loop()
+        finally:
+            spi.unlock()
+            spi.deinit()
 
 
 RandomWalkSensors().start()

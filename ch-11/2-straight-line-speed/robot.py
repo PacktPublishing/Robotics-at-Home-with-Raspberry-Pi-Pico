@@ -3,7 +3,6 @@ import pwmio
 import pio_encoder
 import busio
 import adafruit_vl53l1x
-import adafruit_bno055
 
 
 motor_A1 = pwmio.PWMOut(board.GP17)
@@ -18,12 +17,11 @@ right_encoder = pio_encoder.QuadratureEncoder(board.GP20, board.GP21, reversed=T
 left_encoder = pio_encoder.QuadratureEncoder(board.GP26, board.GP27)
 
 i2c0 = busio.I2C(sda=board.GP0, scl=board.GP1)
-# i2c1 = busio.I2C(sda=board.GP2, scl=board.GP3)
+i2c1 = busio.I2C(sda=board.GP2, scl=board.GP3)
 
-# right_distance = adafruit_vl53l1x.VL53L1X(i2c0)
-# left_distance = adafruit_vl53l1x.VL53L1X(i2c1)
+left_distance = adafruit_vl53l1x.VL53L1X(i2c0)
+right_distance = adafruit_vl53l1x.VL53L1X(i2c1)
 
-imu = adafruit_bno055.BNO055_I2C(i2c0)
 
 def stop():
     motor_A1.duty_cycle = 0
