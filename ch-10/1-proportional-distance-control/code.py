@@ -25,6 +25,8 @@ while True:
     distance = robot.left_distance.distance
     error = distance_set_point - distance
     speed = distance_controller.calculate(error)
+    if abs(speed) < 0.2:
+      speed = 0
     uart.write(f"{error},{speed}\n".encode())
     print(f"{error},{speed}")
     robot.set_left(speed)
