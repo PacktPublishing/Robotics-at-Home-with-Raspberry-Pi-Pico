@@ -67,7 +67,6 @@ class QuadratureEncoder:
         )
         self.reversed = reversed
         self._buffer = array.array("i", [0])
-        self.previous_reading = 0
 
     def read(self):
         while self.sm.in_waiting:
@@ -76,9 +75,3 @@ class QuadratureEncoder:
             return -self._buffer[0]
         else:
             return self._buffer[0]
-
-    def get_speed(self, delta_time):
-        new_read = self.read()
-        distance = new_read - self.previous_reading
-        self.previous_reading = new_read
-        return distance / delta_time
