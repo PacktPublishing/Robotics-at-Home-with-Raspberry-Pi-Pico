@@ -28,7 +28,7 @@ async def command_handler():
     if uart.in_waiting:
       command = uart.readline().decode().strip()
       if command.startswith("M"):
-        speed = float(command[1:])
+        Settings.speed = float(command[1:])
       elif command.startswith("T"):
         Settings.time_interval = float(command[1:])
       elif command == "O":
@@ -43,5 +43,8 @@ async def command_handler():
         await asyncio.sleep(3)
     await asyncio.sleep(0)
 
-asyncio.create_task(motor_speed_loop())
-asyncio.run(command_handler())
+try:
+  asyncio.create_task(motor_speed_loop())
+  asyncio.run(command_handler())
+finally:
+  robot.stop()
