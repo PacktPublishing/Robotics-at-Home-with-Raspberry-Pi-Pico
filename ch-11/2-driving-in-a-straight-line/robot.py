@@ -3,18 +3,29 @@ import pwmio
 import pio_encoder
 import busio
 import adafruit_vl53l1x
+import math
 
+wheel_diameter_mm = 70
+wheel_circumference_mm = math.pi * wheel_diameter_mm
+gear_ratio = 298
+encoder_poles = 28
+ticks_per_revolution = encoder_poles * gear_ratio
+ticks_to_mm_const = wheel_circumference_mm / ticks_per_revolution
 
-motor_A1 = pwmio.PWMOut(board.GP17)
-motor_A2 = pwmio.PWMOut(board.GP16)
-motor_B1 = pwmio.PWMOut(board.GP18)
-motor_B2 = pwmio.PWMOut(board.GP19)
+def ticks_to_mm(ticks):
+    return ticks_to_mm_const * ticks
+
+motor_A2 = pwmio.PWMOut(board.GP17, frequency=100)
+motor_A1 = pwmio.PWMOut(board.GP16, frequency=100)
+motor_B2 = pwmio.PWMOut(board.GP18, frequency=100)
+motor_B1 = pwmio.PWMOut(board.GP19, frequency=100)
 
 right_motor = motor_A1, motor_A2
 left_motor = motor_B1, motor_B2
+motor_dead_zone = 0.2
 
-right_encoder = pio_encoder.QuadratureEncoder(board.GP20, board.GP21, reversed=True)
-left_encoder = pio_encoder.QuadratureEncoder(board.GP26, board.GP27)
+right_encoder = pio_encoder.QuadratureEncoder(board.GP20, board.GP21)
+left_encoder = pio_encoder.QuadratureEncoder(board.GP26, board.GP27, reversed=True)
 
 i2c0 = busio.I2C(sda=board.GP0, scl=board.GP1)
 i2c1 = busio.I2C(sda=board.GP2, scl=board.GP3)
@@ -31,6 +42,11 @@ def stop():
 
 
 def set_speed(motor, speed):
+    # stop completely if in the dead zone
+    if abs(speed) < motor_dead_zone:
+        motor[0].duty_cycle = 0
+        motor[1].duty_cycle = 0
+        return
     # Swap motor pins if we reverse the speed
     if speed < 0:
         direction = motor[1], motor[0]

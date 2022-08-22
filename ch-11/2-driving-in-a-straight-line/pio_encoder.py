@@ -1,6 +1,8 @@
 import rp2pio
 import adafruit_pioasm
 import array
+import asyncio
+
 
 program = """
 ; use the osr for count
@@ -67,18 +69,16 @@ class QuadratureEncoder:
         )
         self.reversed = reversed
         self._buffer = array.array("i", [0])
-        self.previous_reading = 0
+        asyncio.create_task(self.poll_loop())
+
+    async def poll_loop(self):
+        while True:
+            await asyncio.sleep(0)
+            while self.sm.in_waiting:
+                self.sm.readinto(self._buffer)
 
     def read(self):
-        while self.sm.in_waiting:
-            self.sm.readinto(self._buffer)
         if self.reversed:
             return -self._buffer[0]
         else:
             return self._buffer[0]
-
-    def get_speed(self, delta_time):
-        new_read = self.read()
-        distance = new_read - self.previous_reading
-        self.previous_reading = new_read
-        return distance / delta_time
