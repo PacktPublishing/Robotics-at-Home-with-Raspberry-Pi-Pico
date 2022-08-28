@@ -4,6 +4,9 @@ import pio_encoder
 import busio
 import adafruit_vl53l1x
 import math
+import busio
+
+uart = busio.UART(board.GP12, board.GP13, baudrate=9600)
 
 wheel_diameter_mm = 70
 wheel_circumference_mm = math.pi * wheel_diameter_mm
@@ -22,7 +25,6 @@ motor_B1 = pwmio.PWMOut(board.GP19, frequency=100)
 
 right_motor = motor_A1, motor_A2
 left_motor = motor_B1, motor_B2
-motor_dead_zone = 0.2
 
 right_encoder = pio_encoder.QuadratureEncoder(board.GP20, board.GP21)
 left_encoder = pio_encoder.QuadratureEncoder(board.GP26, board.GP27, reversed=True)
@@ -42,11 +44,6 @@ def stop():
 
 
 def set_speed(motor, speed):
-    # stop completely if in the dead zone
-    if abs(speed) < motor_dead_zone:
-        motor[0].duty_cycle = 0
-        motor[1].duty_cycle = 0
-        return
     # Swap motor pins if we reverse the speed
     if speed < 0:
         direction = motor[1], motor[0]
