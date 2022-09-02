@@ -34,6 +34,7 @@ async def command_handler():
       elif command == "O":
         robot.stop()
       elif command.startswith("O"):
+        await asyncio.sleep(5)
         robot.set_left(Settings.speed)
         robot.set_right(Settings.speed)
         asyncio.create_task(stop_motors_after(float(command[1:])))
