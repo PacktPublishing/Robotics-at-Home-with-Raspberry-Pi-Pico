@@ -3,58 +3,65 @@ import time
 import robot
 import pid_controller
 
-class Settings:
-  speed = 0.17
-  time_interval = 0.2
-  motors_enabled = False
 
-
-class SpeedController:
+class DistanceController:
   def __init__(self, encoder, motor_fn):
     self.encoder = encoder
     self.motor_fn = motor_fn
-    self.pid = pid_controller.PIDController(3, 0, 1)
+    # accel
+    # self.pid = pid_controller.PIDController(0.00000, 0,	0.00008, d_filter_gain=1) 
+    self.pid = pid_controller.PIDController(0.00000, 0.0000,	0.00001, d_filter_gain=1) 
+    self.start_ticks = self.encoder.read()
+    self.pwm = 0
+    self.error = 0
+
+  def update(self, dt, expected, debug=False):
+    actual = self.encoder.read() - self.start_ticks
+    # calculate the error
+    self.error = expected - actual
+
+    # calculate the control signal
+    control_signal = self.pid.calculate(self.error, dt)
+    print(control_signal)
+    # self.pwm += control_signal
+    if debug:
+      robot.uart.write(f"0, {expected:.2f},{actual:.2f}\n".encode())
+    # self.motor_fn(self.pwm)
+    self.motor_fn(control_signal)
+
+class DistanceTracker:
+  def __init__(self):
+    self.speed = 0.10
+    self.time_interval = 0.2
     self.reset()
 
   def reset(self):
-    self.last_ticks = self.encoder.read()
-    self.error = 0
-    self.speed = 0
-    self.actual_speed = 0
-    self.pid.reset()
+    self.start_time = time.monotonic()
+    self.total_distance_in_ticks = 0
+    self.total_time = 0.1
 
-  def update(self, dt):
-    current_ticks = self.encoder.read()
-    speed_in_ticks = (current_ticks - self.last_ticks) / dt
-    self.last_ticks = current_ticks
-    self.actual_speed = robot.ticks_to_mm(speed_in_ticks) / 1000
-    # calculate the error  
-    self.error = (Settings.speed * Settings.motors_enabled) - self.actual_speed
-    # calculate the control signal
-    control_signal = self.pid.calculate(self.error, dt)
-    self.speed += control_signal
-    self.motor_fn(self.speed)
+  def set_distance(self, new_distance):
+    self.reset()
+    self.total_distance_in_ticks = robot.mm_to_ticks(new_distance * 1000)
+    self.total_time = new_distance / self.speed
 
-
-left = SpeedController(robot.left_encoder, robot.set_left)
-right = SpeedController(robot.right_encoder, robot.set_right)
-
-
-async def motor_speed_loop():
-  last_time = time.monotonic()
-  while True:
-    await asyncio.sleep(Settings.time_interval)
-    current_time = time.monotonic()
-    dt = current_time - last_time
-    last_time = current_time
-    left.update(dt)
-    right.update(dt)
-    robot.uart.write(f"0, {left.actual_speed:.2f},{Settings.speed:.2f}\n".encode())
+  async def loop(self):
+    left = DistanceController(robot.left_encoder, robot.set_left)
+    right = DistanceController(robot.right_encoder, robot.set_right)
+    last_time = time.monotonic()
+    while True:
+      await asyncio.sleep(self.time_interval)
+      current_time = time.monotonic()
+      dt = current_time - last_time
+      last_time = current_time
+      elapsed_time = current_time - self.start_time
+      time_proportion = min(1, elapsed_time / self.total_time)
+      expected = time_proportion * self.total_distance_in_ticks
+      left.update(dt, expected, debug=True)
+      right.update(dt, expected)
 
 
-async def stop_motors_after(seconds):
-  await asyncio.sleep(seconds)
-  Settings.motors_enabled = False
+distance_tracker = DistanceTracker()
 
 
 async def command_handler():
@@ -62,41 +69,25 @@ async def command_handler():
     if robot.uart.in_waiting:
       command = robot.uart.readline().decode().strip()
       # PID settings
-      if command.startswith("P"):
-        left.pid.kp = float(command[1:])
-        right.pid.kp = float(command[1:])
-      elif command.startswith("I"):
-        left.pid.ki = float(command[1:])
-        left.pid.reset()
-        right.pid.ki = float(command[1:])
-        right.pid.reset()
-      elif command.startswith("D"):
-        left.pid.kd = float(command[1:])
-        right.pid.kd = float(command[1:])
+      if command.startswith("M"):
+        distance_tracker.speed = float(command[1:])
       elif command.startswith("T"):
-        Settings.time_interval = float(command[1:])
-      # Speed settings
-      elif command.startswith("M"):
-        Settings.speed = float(command[1:])
+        distance_tracker.time_interval = float(command[1:])
       # Start/stop commands
       elif command == "O":
-        Settings.motors_enabled = False
+        distance_tracker.set_distance(0)
       elif command.startswith("O"):
         await asyncio.sleep(5)
-        asyncio.create_task(stop_motors_after(float(command[1:])))
-        Settings.motors_enabled = True
-        left.reset()
-        right.reset()
+        distance_tracker.set_distance(float(command[1:]))
       # Print settings
       elif command.startswith("?"):
-        robot.uart.write(f"M{Settings.speed:.1f}\n".encode())
-        robot.uart.write(f"P{left.pid.kp:.2f}:I{left.pid.ki:.2f}:D{left.pid.kd:.2f}\n".encode())
-        robot.uart.write(f"T{Settings.time_interval:.1f}\n".encode())
+        robot.uart.write(f"M{distance_tracker.speed:.1f}\n".encode())
+        robot.uart.write(f"T{distance_tracker.time_interval:.1f}\n".encode())
         await asyncio.sleep(3)
     await asyncio.sleep(0)
 
 try:
-  asyncio.create_task(motor_speed_loop())
+  asyncio.create_task(distance_tracker.loop())
   asyncio.run(command_handler())
 finally:
   robot.stop()

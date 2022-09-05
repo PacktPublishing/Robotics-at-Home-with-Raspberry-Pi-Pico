@@ -45,6 +45,10 @@ def stop():
 
 def set_speed(motor, speed):
     # Swap motor pins if we reverse the speed
+    if abs(speed) < 0.1:
+        motor[0].duty_cycle = 0
+        motor[1].duty_cycle = 1
+        return
     if speed < 0:
         direction = motor[1], motor[0]
         speed = -speed
