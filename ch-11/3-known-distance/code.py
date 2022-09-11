@@ -8,14 +8,7 @@ class DistanceController:
   def __init__(self, encoder, motor_fn):
     self.encoder = encoder
     self.motor_fn = motor_fn
-    # self.pid = pid_controller.PIDController(1.9, 0.5,	0.3, d_filter_gain=1) 
     self.pid = pid_controller.PIDController(3.25, 0.5,	0.5, d_filter_gain=1) 
-    # works well with direct pwm control
-    # started with p at 0, and started increasing until it started to oscillate
-    # then reduced.
-    # started increasing i in 0.1 increments, to take up the steady state error
-    # once this was gone, there was still an overshoot.
-    # increase d in 0.1 increments until the overshoot was gone. 
     self.start_ticks = self.encoder.read()
     self.error = 0
 
@@ -86,8 +79,5 @@ async def command_handler():
         await asyncio.sleep(3)
     await asyncio.sleep(0)
 
-try:
-  asyncio.create_task(distance_tracker.loop())
-  asyncio.run(command_handler())
-finally:
-  robot.stop()
+asyncio.create_task(distance_tracker.loop())
+asyncio.run(command_handler())

@@ -79,8 +79,5 @@ async def command_handler():
         await asyncio.sleep(3)
     await asyncio.sleep(0)
 
-try:
-  asyncio.create_task(motor_speed_loop())
-  asyncio.run(command_handler())
-finally:
-  robot.stop()
+asyncio.create_task(motor_speed_loop())
+asyncio.run(command_handler())
