@@ -26,7 +26,7 @@ class SpeedController:
     current_ticks = self.encoder.read()
     speed_in_ticks = (current_ticks - self.last_ticks) / dt
     self.last_ticks = current_ticks
-    self.actual_speed = robot.ticks_to_mm(speed_in_ticks) / 1000
+    self.actual_speed = robot.ticks_to_m * speed_in_ticks
     # calculate the error
     error = (Settings.speed * Settings.motors_enabled) - self.actual_speed
     # calculate the control signal

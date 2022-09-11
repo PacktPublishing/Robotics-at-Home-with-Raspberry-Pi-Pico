@@ -13,10 +13,7 @@ wheel_circumference_mm = math.pi * wheel_diameter_mm
 gear_ratio = 298
 encoder_poles = 28
 ticks_per_revolution = encoder_poles * gear_ratio
-ticks_to_mm_const = wheel_circumference_mm / ticks_per_revolution
-
-def ticks_to_mm(ticks):
-    return ticks_to_mm_const * ticks
+ticks_to_m = (wheel_circumference_mm / ticks_per_revolution) / 1000
 
 motor_A2 = pwmio.PWMOut(board.GP17, frequency=100)
 motor_A1 = pwmio.PWMOut(board.GP16, frequency=100)

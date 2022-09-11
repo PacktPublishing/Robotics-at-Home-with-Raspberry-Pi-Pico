@@ -8,42 +8,41 @@ class DistanceController:
   def __init__(self, encoder, motor_fn):
     self.encoder = encoder
     self.motor_fn = motor_fn
-    # accel
-    # self.pid = pid_controller.PIDController(0.00000, 0,	0.00008, d_filter_gain=1) 
-    self.pid = pid_controller.PIDController(0.00000, 0.0000,	0.00001, d_filter_gain=1) 
+    # self.pid = pid_controller.PIDController(1.9, 0.5,	0.3, d_filter_gain=1) 
+    self.pid = pid_controller.PIDController(3.25, 0.5,	0.5, d_filter_gain=1) 
+    # works well with direct pwm control
+    # started with p at 0, and started increasing until it started to oscillate
+    # then reduced.
+    # started increasing i in 0.1 increments, to take up the steady state error
+    # once this was gone, there was still an overshoot.
+    # increase d in 0.1 increments until the overshoot was gone. 
     self.start_ticks = self.encoder.read()
-    self.pwm = 0
     self.error = 0
 
-  def update(self, dt, expected, debug=False):
-    actual = self.encoder.read() - self.start_ticks
+  def update(self, dt, expected):
+    self.actual = self.encoder.read() - self.start_ticks
     # calculate the error
-    self.error = expected - actual
-
+    self.error = (expected - self.actual) / robot.ticks_per_revolution
     # calculate the control signal
     control_signal = self.pid.calculate(self.error, dt)
-    print(control_signal)
-    # self.pwm += control_signal
-    if debug:
-      robot.uart.write(f"0, {expected:.2f},{actual:.2f}\n".encode())
-    # self.motor_fn(self.pwm)
     self.motor_fn(control_signal)
-
+ 
 class DistanceTracker:
   def __init__(self):
-    self.speed = 0.10
+    self.speed = 0.17
     self.time_interval = 0.2
-    self.reset()
-
-  def reset(self):
     self.start_time = time.monotonic()
+    self.current_position = 0
     self.total_distance_in_ticks = 0
     self.total_time = 0.1
 
   def set_distance(self, new_distance):
-    self.reset()
-    self.total_distance_in_ticks = robot.mm_to_ticks(new_distance * 1000)
-    self.total_time = new_distance / self.speed
+    # add the last travelled distance to the current position
+    self.current_position += self.total_distance_in_ticks
+    # calculate the new additional distance
+    self.total_distance_in_ticks = robot.m_to_ticks * new_distance
+    self.total_time = max(0.1, abs(new_distance / self.speed))
+    self.start_time = time.monotonic()
 
   async def loop(self):
     left = DistanceController(robot.left_encoder, robot.set_left)
@@ -56,9 +55,10 @@ class DistanceTracker:
       last_time = current_time
       elapsed_time = current_time - self.start_time
       time_proportion = min(1, elapsed_time / self.total_time)
-      expected = time_proportion * self.total_distance_in_ticks
-      left.update(dt, expected, debug=True)
+      expected = time_proportion * self.total_distance_in_ticks + self.current_position
+      left.update(dt, expected)
       right.update(dt, expected)
+      robot.uart.write(f"0, {expected:.2f},{left.actual:.2f}\n".encode())
 
 
 distance_tracker = DistanceTracker()

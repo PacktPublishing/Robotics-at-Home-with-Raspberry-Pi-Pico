@@ -10,9 +10,9 @@ async def motor_speed_loop():
   while True:
     await asyncio.sleep(Settings.time_interval)
     left_new, right_new = robot.left_encoder.read(), robot.right_encoder.read()
-    left_speed = robot.ticks_to_mm(left_new - left_last) / Settings.time_interval
+    left_speed = robot.ticks_to_m * (left_new - left_last) / Settings.time_interval
     left_last = left_new
-    right_speed = robot.ticks_to_mm(right_new - right_last) / Settings.time_interval
+    right_speed = robot.ticks_to_m * (right_new - right_last) / Settings.time_interval
     right_last = right_new
     robot.uart.write(f"{left_speed:.3f},{right_speed:.3f},0\n".encode())
 

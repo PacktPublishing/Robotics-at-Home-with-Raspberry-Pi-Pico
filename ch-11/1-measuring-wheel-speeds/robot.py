@@ -13,14 +13,7 @@ wheel_circumference_mm = math.pi * wheel_diameter_mm
 gear_ratio = 298
 encoder_poles = 28
 ticks_per_revolution = encoder_poles * gear_ratio
-ticks_to_mm_const = wheel_circumference_mm / ticks_per_revolution
-
-def ticks_to_mm(ticks):
-    return ticks_to_mm_const * ticks
-
-def mm_to_ticks(mm):
-    return mm / ticks_to_mm_const
-
+ticks_to_m = (wheel_circumference_mm / ticks_per_revolution) / 1000
 
 motor_A2 = pwmio.PWMOut(board.GP17, frequency=100)
 motor_A1 = pwmio.PWMOut(board.GP16, frequency=100)
@@ -49,10 +42,6 @@ def stop():
 
 def set_speed(motor, speed):
     # Swap motor pins if we reverse the speed
-    if abs(speed) < 0.1:
-        motor[0].duty_cycle = 0
-        motor[1].duty_cycle = 1
-        return
     if speed < 0:
         direction = motor[1], motor[0]
         speed = -speed
