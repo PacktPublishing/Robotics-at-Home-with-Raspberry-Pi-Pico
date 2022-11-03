@@ -11,30 +11,25 @@ class BleConnection:
     adafruit_tx_uuid = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
     ble_name = "Adafruit Bluefruit LE"
 
-    def __init__(self, receive_handler: typing.Callable[[bytes], None] = None, 
-            connected_handler: typing.Callable[[], None] = None):
+    def __init__(self, receive_handler: typing.Callable[[bytes], None], 
+            connected_handler: typing.Callable[[], None]):
         self.ble_client : bleak.BleakClient = None
-        # receive_handler(bytes) -> None
         self.receive_handler = receive_handler
-        # connected_handler() -> None
         self.connected_handler = connected_handler
 
     def _uart_handler(self, _, data: bytes):
-        # hmm - not receiving the whole message, only parts of it...
-        if self.receive_handler:
-          self.receive_handler(data)
+        self.receive_handler(data)
 
     async def connect(self):
         print("Scanning for devices...")
         devices = await bleak.BleakScanner.discover(service_uuids=[self.ble_uuid])
-        print("Found {} devices".format(len(devices)))
-        print([device.name for device in devices])
+        print(f"Found {len(devices)} devices")
+        print([device.name for device in devices])        
         ble_device_info = [device for device in devices if device.name==self.ble_name][0]
         print("Connecting to {}...".format(ble_device_info.name))
         async with bleak.BleakClient(ble_device_info.address) as ble_client:
             self.ble_client = ble_client
-            if self.connected_handler: 
-                self.connected_handler()
+            self.connected_handler()
             print("Connected to {}".format(ble_device_info.name))
             asyncio.create_task(
                 self.ble_client.start_notify(self.adafruit_rx_uuid, self._uart_handler)

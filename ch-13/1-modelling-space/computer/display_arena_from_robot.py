@@ -7,15 +7,14 @@ from robot_ble_connection import BleConnection
 
 
 class RobotDisplay:
-    def __init__(self, ble_connection: BleConnection):
+    def __init__(self):
         self.fig, self.ax = plt.subplots()
-        self.ble_connection = ble_connection
+        self.ble_connection = BleConnection(self.handle_data, self.connected)
+
         self.arena = None
         self.display_closed = False
         # handle closed event
         self.fig.canvas.mpl_connect("close_event", self.handle_close)
-        ble_connection.receive_handler = self.handle_data
-        ble_connection.connected_handler = self.connected
         self.line = ""
 
     def handle_close(self, _):
@@ -49,20 +48,16 @@ class RobotDisplay:
         print(f"Sending request for arena: {request}")
         self.ble_connection.send_uart_data(request)
 
+    async def main(self): 
+        plt.ion()
 
-async def main():
-    
-    plt.ion()
+        asyncio.create_task(self.ble_connection.connect())
+        while not self.display_closed:
+            plt.pause(0.05)
+            plt.draw()
+            await asyncio.sleep(0.01)
+        
+        plt.show()
 
-    ble_connection = BleConnection()
-    robot_display = RobotDisplay(ble_connection)
-    asyncio.create_task(ble_connection.connect())
-    while not robot_display.display_closed:
-        plt.pause(0.05)
-        plt.draw()
-        await asyncio.sleep(0.01)
-    
-    plt.show()
-
-
-asyncio.run(main())
+robot_display = RobotDisplay()
+asyncio.run(robot_display.main())
