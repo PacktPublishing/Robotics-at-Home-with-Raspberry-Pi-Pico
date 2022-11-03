@@ -11,25 +11,22 @@ class RobotDisplay:
         self.ble_connection = BleConnection(self.handle_data)
         self.line = ""
 
-        self.arena = None
         self.display_closed = False
 
     def handle_close(self, _):
         self.display_closed = True
 
     def handle_data(self, data):
-        line_part = data.decode("utf-8")
-        self.line += line_part
+        self.line += data.decode("utf-8")
         if not self.line.endswith("\n"):
             return
         print(f"Received data: {self.line}")
-        data = json.loads(self.line)
+        message = json.loads(self.line)
         self.line = ""
-        if "arena" in data:
-            self.update(data)
+        if "arena" in message:
+            self.update_arena(message)
 
-    def update(self, arena):
-        self.arena = arena
+    def update_arena(self, arena):
         plt.gca().clear()
         for line in arena["arena"]:
             plt.gca().plot(
