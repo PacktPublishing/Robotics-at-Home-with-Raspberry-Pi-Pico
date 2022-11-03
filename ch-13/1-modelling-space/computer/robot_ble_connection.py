@@ -24,7 +24,7 @@ class BleConnection:
         print(f"Found {len(devices)} devices")
         print([device.name for device in devices])        
         ble_device_info = [device for device in devices if device.name==self.ble_name][0]
-        print("Connecting to {}...".format(ble_device_info.name))
+        print(f"Connecting to {ble_device_info.name}...")
         self.ble_client = bleak.BleakClient(ble_device_info.address)
         await self.ble_client.connect()
         print("Connected to {}".format(ble_device_info.name))
@@ -35,8 +35,5 @@ class BleConnection:
     async def close(self):
         await self.ble_client.disconnect()
                 
-    def send_uart_data(self, data: bytes):
-        if self.ble_client:
-            asyncio.create_task(
-                self.ble_client.write_gatt_char(self.adafruit_tx_uuid, data)
-            )
+    async def send_uart_data(self, data: bytes):
+        await self.ble_client.write_gatt_char(self.adafruit_tx_uuid, data)

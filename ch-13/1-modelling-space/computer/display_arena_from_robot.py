@@ -8,14 +8,11 @@ from robot_ble_connection import BleConnection
 
 class RobotDisplay:
     def __init__(self):
-        self.fig, self.ax = plt.subplots()
         self.ble_connection = BleConnection(self.handle_data)
+        self.line = ""
 
         self.arena = None
         self.display_closed = False
-        # handle closed event
-        self.fig.canvas.mpl_connect("close_event", self.handle_close)
-        self.line = ""
 
     def handle_close(self, _):
         self.display_closed = True
@@ -33,13 +30,13 @@ class RobotDisplay:
 
     def update(self, arena):
         self.arena = arena
-        self.ax.clear()
+        plt.gca().clear()
         for line in arena["arena"]:
-            self.ax.plot(
+            plt.gca().plot(
                 [line[0][0], line[1][0]], [line[0][1], line[1][1]], color="black"
             )
         for line in arena["target_zone"]:
-            self.ax.plot(
+            plt.gca().plot(
                 [line[0][0], line[1][0]], [line[0][1], line[1][1]], color="red"
             )
 
@@ -48,9 +45,10 @@ class RobotDisplay:
 
         try:
             await self.ble_connection.connect()
-            request = json.dumps({"type": "arena"}).encode()
+            request = json.dumps({"command": "arena"}).encode()
             print(f"Sending request for arena: {request}")
-            self.ble_connection.send_uart_data(request)
+            await self.ble_connection.send_uart_data(request)
+            plt.gcf().canvas.mpl_connect("close_event", self.handle_close)
 
             while not self.display_closed:
                 plt.pause(0.05)

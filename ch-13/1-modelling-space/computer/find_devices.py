@@ -8,6 +8,6 @@ async def run():
     print(f"Found {len(devices)} devices")
     print([device.name for device in devices])
     ble_device_info = [device for device in devices if device.name==ble_name][0]
-    print("Found robot {}...".format(ble_device_info.name))
+    print(f"Found robot {ble_device_info.name}...")
 
 asyncio.run(run())
