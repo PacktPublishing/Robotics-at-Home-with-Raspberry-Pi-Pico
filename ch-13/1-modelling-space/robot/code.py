@@ -9,10 +9,12 @@ async def command_handler():
   while True:
     if robot.uart.in_waiting:
       print("Receiving data...")
-      data = robot.uart.readline().decode()
-      print(f"Received data: {data}")
-      request = json.loads(data)
-      print(f"Received command: {request}")
+      try:
+        data = robot.uart.readline().decode()
+        request = json.loads(data)
+      except (UnicodeError, ValueError):
+        print("Invalid data")
+        continue
       # {"command": "arena"}
       if request["command"] == "arena":
          response = {
@@ -20,5 +22,6 @@ async def command_handler():
             "target_zone": arena.target_zone,
          }
          robot.uart.write((json.dumps(response)+"\n").encode())
+    await asyncio.sleep(0.1)
 
 asyncio.run(command_handler())
