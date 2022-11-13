@@ -20,26 +20,24 @@ class RobotDisplay:
 
     def handle_data(self, data):
         self.line += data.decode("utf-8")
-        if not self.line.endswith("\n"):
-            return
-        print(f"Received data: {self.line}")
-        try:
-            message = json.loads(self.line)
-        except ValueError:
-            print("Error parsing JSON")
-            return
-        self.line = ""
-        if "arena" in message:
-            self.arena = message
-        if "poses" in message:
-            # the robot poses are an array of [x, y, theta] arrays.
-            # matplotlib quiver plots wants an array of [x,y] arrays, and a separate array of angles
-            poses = np.array(message["poses"]).T
-            self.pose_coords = poses[:2]
-            angle_rads = np.deg2rad(poses[2])
-            self.pose_uv = np.array([np.cos(angle_rads), np.sin(angle_rads)])
- 
-    
+        while "\n" in self.line:
+            line, self.line = self.line.split("\n", 1)
+            print(f"Received data: ```{line}```")
+            try:
+                message = json.loads(line)
+            except ValueError:
+                print("Error parsing JSON")
+                return
+            if "arena" in message:
+                self.arena = message
+            if "poses" in message:
+                # the robot poses are an array of [x, y, theta] arrays.
+                # matplotlib quiver plots wants an [x] ,[y] and [angle] arrays
+                poses = np.array(message["poses"]).T
+                self.pose_coords = poses[:2]
+                angle_rads = np.deg2rad(poses[2])
+                self.pose_uv = np.array([np.cos(angle_rads), np.sin(angle_rads)])
+
     def draw(self):
         plt.gca().clear()
         if self.arena:
@@ -53,13 +51,11 @@ class RobotDisplay:
                 )
         if len(self.pose_coords) > 0:
             plt.quiver(self.pose_coords[0], self.pose_coords[1], self.pose_uv[0], self.pose_uv[1], color="blue")
-        plt.draw()
 
     async def main(self):
         plt.ion()
-
+        await self.ble_connection.connect()
         try:
-            await self.ble_connection.connect()
             request = json.dumps({"command": "arena"}).encode()
             print(f"Sending request for arena: {request}")
             await self.ble_connection.send_uart_data(request)
@@ -67,10 +63,9 @@ class RobotDisplay:
 
             while not self.display_closed:
                 self.draw()
+                plt.draw()
                 plt.pause(0.05)
                 await asyncio.sleep(0.01)
-
-            plt.show()
         finally:
             await self.ble_connection.close()
 
