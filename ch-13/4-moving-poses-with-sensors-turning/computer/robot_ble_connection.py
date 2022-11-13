@@ -6,8 +6,8 @@ import bleak
 class BleConnection:
     # See https://learn.adafruit.com/introducing-adafruit-ble-bluetooth-low-energy-friend/uart-service
     ble_uuid = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
-    adafruit_rx_uuid = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
-    adafruit_tx_uuid = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
+    rx_gatt = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
+    tx_gatt = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
     ble_name = "Adafruit Bluefruit LE"
 
     def __init__(self, receive_handler):
@@ -28,11 +28,11 @@ class BleConnection:
         await self.ble_client.connect()
         print("Connected to {}".format(ble_device_info.name))
         self.notify_task = asyncio.create_task(
-            self.ble_client.start_notify(self.adafruit_rx_uuid, self._uart_handler)
+            self.ble_client.start_notify(self.rx_gatt, self._uart_handler)
         )
 
     async def close(self):
         await self.ble_client.disconnect()
                 
-    async def send_uart_data(self, data: bytes):
-        await self.ble_client.write_gatt_char(self.adafruit_tx_uuid, data)
+    async def send_uart_data(self, data):
+        await self.ble_client.write_gatt_char(self.tx_gatt, data)
