@@ -23,13 +23,12 @@ class RobotDisplay:
         self.line += data.decode("utf-8")
         while "\n" in self.line:
             line, self.line = self.line.split("\n", 1)
-            print(f"Received data: ```{line}```")
+            print(f"Received data: {line}")
             try:
                 message = json.loads(line)
             except ValueError:
                 print("Error parsing JSON")
                 return
-
             if "arena" in message:
                 self.arena = message
             if "poses" in message:
@@ -39,20 +38,20 @@ class RobotDisplay:
                 self.pose_coords = poses[:2]
                 angle_rads = np.deg2rad(poses[2])
                 self.pose_uv = np.array([np.cos(angle_rads), np.sin(angle_rads)])
- 
+
     def draw(self):
-        self.ax.clear()
+        plt.gca().clear()
         if self.arena:
             for line in self.arena["arena"]:
-                self.ax.plot(
+                plt.gca().plot(
                     [line[0][0], line[1][0]], [line[0][1], line[1][1]], color="black"
                 )
             for line in self.arena["target_zone"]:
-                self.ax.plot(
+                plt.gca().plot(
                     [line[0][0], line[1][0]], [line[0][1], line[1][1]], color="red"
                 )
         if len(self.pose_coords) > 0:
-            self.ax.quiver(self.pose_coords[0], self.pose_coords[1], self.pose_uv[0], self.pose_uv[1], color="blue")
+            plt.quiver(self.pose_coords[0], self.pose_coords[1], self.pose_uv[0], self.pose_uv[1], color="blue")
 
     async def send_command(self, command):
         request = json.dumps({"command": command}).encode()
@@ -70,8 +69,7 @@ class RobotDisplay:
         await self.ble_connection.connect()
         try:
             await self.send_command("arena")
-            self.fig, self.ax = plt.subplots()
-            self.fig.canvas.mpl_connect("close_event", self.handle_close)
+            plt.gcf().canvas.mpl_connect("close_event", self.handle_close)
             start_button = Button(plt.axes([0.7, 0.05, 0.1, 0.075]), "Start")
             start_button.on_clicked(self.start)
             stop_button = Button(plt.axes([0.81, 0.05, 0.1, 0.075]), "Stop")
@@ -79,10 +77,9 @@ class RobotDisplay:
 
             while not self.display_closed:
                 self.draw()
+                plt.draw()
                 plt.pause(0.05)
                 await asyncio.sleep(0.01)
-
-                plt.draw()
         finally:
             await self.ble_connection.close()
 

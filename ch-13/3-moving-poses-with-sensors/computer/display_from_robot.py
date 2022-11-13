@@ -23,7 +23,7 @@ class RobotDisplay:
         self.line += data.decode("utf-8")
         while "\n" in self.line:
             line, self.line = self.line.split("\n", 1)
-            print(f"Received data: ```{line}```")
+            print(f"Received data: {line}")
             try:
                 message = json.loads(line)
             except ValueError:
@@ -38,7 +38,7 @@ class RobotDisplay:
                 self.pose_coords = poses[:2]
                 angle_rads = np.deg2rad(poses[2])
                 self.pose_uv = np.array([np.cos(angle_rads), np.sin(angle_rads)])
- 
+
     def draw(self):
         plt.gca().clear()
         if self.arena:
@@ -69,7 +69,7 @@ class RobotDisplay:
         await self.ble_connection.connect()
         try:
             await self.send_command("arena")
-            self.gcf().canvas.mpl_connect("close_event", self.handle_close)
+            plt.gcf().canvas.mpl_connect("close_event", self.handle_close)
             start_button = Button(plt.axes([0.7, 0.05, 0.1, 0.075]), "Start")
             start_button.on_clicked(self.start)
             stop_button = Button(plt.axes([0.81, 0.05, 0.1, 0.075]), "Stop")
@@ -77,9 +77,9 @@ class RobotDisplay:
 
             while not self.display_closed:
                 self.draw()
+                plt.draw()
                 plt.pause(0.05)
                 await asyncio.sleep(0.01)
-                plt.draw()
         finally:
             await self.ble_connection.close()
 

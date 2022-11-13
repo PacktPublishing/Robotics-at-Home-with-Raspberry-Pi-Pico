@@ -22,7 +22,7 @@ class RobotDisplay:
         self.line += data.decode("utf-8")
         while "\n" in self.line:
             line, self.line = self.line.split("\n", 1)
-            print(f"Received data: ```{line}```")
+            print(f"Received data: {line}")
             try:
                 message = json.loads(line)
             except ValueError:
