@@ -28,9 +28,11 @@ class Simulation:
       # first those outside the arena
       keep = arena.point_is_inside_arena((pose[0], pose[1]))
       if keep:
-        left_distance_point = pose[0] + robot.distance_sensor_from_middle + left_distance * np.cos(np.radians(pose[2])), pose[1] + left_distance * np.sin(np.radians(pose[2]))
-        right_distance_point = pose[0] + robot.distance_sensor_from_middle + right_distance * np.cos(np.radians(pose[2])), pose[1] + right_distance * np.sin(np.radians(pose[2]))
-        keep = arena.point_is_inside_arena(left_distance_point) and arena.point_is_inside_arena(right_distance_point)
+        left_distance_origin = pose[0] + robot.distance_sensor_from_middle * np.cos(np.radians(pose[2] + 90)), pose[1] + robot.distance_sensor_from_middle * np.sin(np.radians(pose[2] + 90))
+        right_distance_origin = pose[0] + robot.distance_sensor_from_middle * np.cos(np.radians(pose[2] - 90)), pose[1] + robot.distance_sensor_from_middle * np.sin(np.radians(pose[2] - 90))
+        left_distance_end = left_distance_origin[0] + left_distance * np.cos(np.radians(pose[2])), left_distance_origin[1] + left_distance * np.sin(np.radians(pose[2]))
+        right_distance_end = right_distance_origin[0] + right_distance * np.cos(np.radians(pose[2])), right_distance_origin[1] + right_distance * np.sin(np.radians(pose[2]))
+        keep = arena.point_is_inside_arena(left_distance_end) and arena.point_is_inside_arena(right_distance_end)
       poses_to_keep[position] = int(keep)
     # apply the keep as a mask to the poses using ulab. - doesn't work in ulab.
     self.poses = np.array([item for item, keep in zip(self.poses, poses_to_keep) if keep])
@@ -54,8 +56,8 @@ class Simulation:
         heading_change =  starting_heading - new_heading
         self.move_poses(speed_in_mm, heading_change)
         if robot.left_distance.data_ready and robot.right_distance.data_ready:
-          left_distance = robot.left_distance.distance
-          right_distance = robot.right_distance.distance
+          left_distance = robot.left_distance.distance * 10 # convert to mm
+          right_distance = robot.right_distance.distance * 10 
           self.eliminate_impossible_poses(left_distance, right_distance)
           robot.left_distance.clear_interrupt()
           robot.right_distance.clear_interrupt()
