@@ -22,7 +22,7 @@ class Simulation:
       pose[1] += speed_in_mm * np.sin(np.radians(pose[2]))
 
   def eliminate_impossible_poses(self, left_distance, right_distance):
-    poses_to_keep = np.ones(len(self.poses), dtype=bool)
+    poses_to_keep = np.ones(len(self.poses), dtype=np.uint8)
     # todo: would reorganising these pose arrays let us better use ulab tools?
     for position, pose in enumerate(self.poses):
       # first those outside the arena
@@ -31,9 +31,9 @@ class Simulation:
         left_distance_point = pose[0] + robot.distance_sensor_from_middle + left_distance * np.cos(np.radians(pose[2])), pose[1] + left_distance * np.sin(np.radians(pose[2]))
         right_distance_point = pose[0] + robot.distance_sensor_from_middle + right_distance * np.cos(np.radians(pose[2])), pose[1] + right_distance * np.sin(np.radians(pose[2]))
         keep = arena.point_is_inside_arena(left_distance_point) and arena.point_is_inside_arena(right_distance_point)
-      poses_to_keep[position] = keep
+      poses_to_keep[position] = int(keep)
     # apply the keep as a mask to the poses using ulab. - doesn't work in ulab.
-    self.poses = [item for item, keep in zip(self.poses, poses_to_keep) if keep]
+    self.poses = np.array([item for item, keep in zip(self.poses, poses_to_keep) if keep])
 
   async def run(self):
     try:
@@ -62,6 +62,9 @@ class Simulation:
     finally:
       robot.stop()
 
+def send_json(data):
+  robot.uart.write((json.dumps(data)+"\n").encode())
+
 async def command_handler(simulation):
   simulation_task = None
   while True:
@@ -75,11 +78,10 @@ async def command_handler(simulation):
         continue
       # {"command": "arena"}
       if request["command"] == "arena":
-         response = {
+         send_json({
             "arena": arena.boundary_lines,
             "target_zone": arena.target_zone,
-         }
-         robot.uart.write((json.dumps(response)+"\n").encode())
+         })
       elif request["command"] == "start":
         print("Starting simulation")
         if simulation_task is None or simulation_task.done():
@@ -90,10 +92,18 @@ async def command_handler(simulation):
           simulation_task.cancel()
           simulation_task = None
     else:
-      response = {
-        "poses": simulation.poses.tolist(),
-      }
-      robot.uart.write((json.dumps(response)+"\n").encode())
+      sys_status, gyro, accel, mag = robot.imu.calibration_status
+      if sys_status != 3:
+        send_json({"imu_calibration": {
+          "gyro": gyro,
+          "accel": accel,
+          "mag": mag,
+          "sys": sys_status,
+        }})
+      else:
+        send_json({
+          "poses": simulation.poses.tolist(),
+        })
     await asyncio.sleep(0.1)
 
 simulation= Simulation()

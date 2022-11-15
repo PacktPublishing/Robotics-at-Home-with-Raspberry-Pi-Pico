@@ -39,22 +39,23 @@ class RobotDisplay:
                 self.pose_uv = np.array([np.cos(angle_rads), np.sin(angle_rads)])
 
     def draw(self):
-        plt.gca().clear()
+        self.ax.clear()
         if self.arena:
             for line in self.arena["arena"]:
-                plt.gca().plot(
+                self.ax.plot(
                     [line[0][0], line[1][0]], [line[0][1], line[1][1]], color="black"
                 )
             for line in self.arena["target_zone"]:
-                plt.gca().plot(
+                self.ax.plot(
                     [line[0][0], line[1][0]], [line[0][1], line[1][1]], color="red"
                 )
         if len(self.pose_coords) > 0:
-            plt.quiver(self.pose_coords[0], self.pose_coords[1], self.pose_uv[0], self.pose_uv[1], color="blue")
+            self.ax.quiver(self.pose_coords[0], self.pose_coords[1], self.pose_uv[0], self.pose_uv[1], color="blue")
 
     async def main(self):
         plt.ion()
         await self.ble_connection.connect()
+        self.fig, self.ax = plt.subplots()
         try:
             request = json.dumps({"command": "arena"}).encode()
             print(f"Sending request for arena: {request}")

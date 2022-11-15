@@ -30,6 +30,9 @@ class Simulation:
     finally:
       robot.stop()
 
+def send_json(data):
+  robot.uart.write((json.dumps(data)+"\n").encode())
+
 async def command_handler(simulation):
   simulation_task = None
   while True:
@@ -37,22 +40,16 @@ async def command_handler(simulation):
       print("Receiving data...")
       try:
         data = robot.uart.readline().decode()
-      except UnicodeError:
-        print("Invalid data")
-        continue
-      try:
         request = json.loads(data)
-        print(f"Received command: {request}")
-      except ValueError:
-        print("Invalid JSON")
+      except (UnicodeError, ValueError):
+        print("Invalid data")
         continue
       # {"command": "arena"}
       if request["command"] == "arena":
-         response = {
+         send_json({
             "arena": arena.boundary_lines,
             "target_zone": arena.target_zone,
-         }
-         robot.uart.write((json.dumps(response)+"\n").encode())
+         })
       elif request["command"] == "start":
         print("Starting simulation")
         if simulation_task is None or simulation_task.done():
@@ -63,10 +60,9 @@ async def command_handler(simulation):
           simulation_task.cancel()
           simulation_task = None
     else:
-      response = {
+      send_json({
         "poses": simulation.poses.tolist(),
-      }
-      robot.uart.write((json.dumps(response)+"\n").encode())
+      })
     await asyncio.sleep(0.1)
 
 simulation= Simulation()

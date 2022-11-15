@@ -13,6 +13,8 @@ class Simulation:
     for n in range(population_size):
       self.poses[n] = random.uniform(0, arena.width), random.uniform(0, arena.height), random.uniform(0, 360)
   
+def send_json(data):
+  robot.uart.write((json.dumps(data)+"\n").encode())
 
 async def command_handler(simulation):
   while True:
@@ -20,27 +22,20 @@ async def command_handler(simulation):
       print("Receiving data...")
       try:
         data = robot.uart.readline().decode()
-      except UnicodeError:
-        print("Invalid data")
-        continue
-      try:
         request = json.loads(data)
-        print(f"Received command: {request}")
-      except ValueError:
-        print("Invalid JSON")
+      except (UnicodeError, ValueError):
+        print("Invalid data")
         continue
       # {"command": "arena"}
       if request["command"] == "arena":
-         response = {
+         send_json({
             "arena": arena.boundary_lines,
             "target_zone": arena.target_zone,
-         }
-         robot.uart.write((json.dumps(response)+"\n").encode())
+         })
     else:
-      response = {
+      send_json({
         "poses": simulation.poses.tolist(),
-      }
-      robot.uart.write((json.dumps(response)+"\n").encode())
+      })
     await asyncio.sleep(0.1)
 
 simulation= Simulation()
