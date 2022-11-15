@@ -13,6 +13,13 @@ class Simulation:
     for n in range(population_size):
       self.poses[n] = random.uniform(0, arena.width), random.uniform(0, arena.height), random.uniform(0, 360)
   
+  def move_poses(self, speed_in_mm, heading_change):
+    for pose in self.poses:
+      pose[2] += heading_change
+      pose[2] = pose[2] % 360
+      pose[0] += speed_in_mm * np.cos(np.radians(pose[2]))
+      pose[1] += speed_in_mm * np.sin(np.radians(pose[2]))
+
   async def run(self):
     try:
       for _ in range(5):
@@ -27,11 +34,7 @@ class Simulation:
         speed_in_mm = robot.ticks_to_m * ((left_movement + right_movement) / 2) * 1000
         new_heading = robot.imu.euler[0]
         heading_change =  starting_heading - new_heading
-        for pose in self.poses:
-          pose[2] += heading_change
-          pose[2] = pose[2] % 360
-          pose[0] += speed_in_mm * np.cos(np.radians(pose[2]))
-          pose[1] += speed_in_mm * np.sin(np.radians(pose[2]))
+        self.move_poses(speed_in_mm, heading_change)
     finally:
       robot.stop()
 
