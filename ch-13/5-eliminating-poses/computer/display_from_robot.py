@@ -13,6 +13,7 @@ class RobotDisplay:
         self.line = ""
         self.arena = {}
         self.display_closed = False
+        self.fig, self.ax = plt.subplots()
         self.pose_coords = []
         self.pose_uv = []
 
@@ -67,7 +68,6 @@ class RobotDisplay:
     async def main(self):
         plt.ion()
         await self.ble_connection.connect()
-        self.fig, self.ax = plt.subplots()
         try:
             await self.send_command("arena")
             self.fig.canvas.mpl_connect("close_event", self.handle_close)

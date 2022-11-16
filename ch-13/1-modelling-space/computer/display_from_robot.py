@@ -11,6 +11,7 @@ class RobotDisplay:
         self.line = ""
         self.arena = {}
         self.display_closed = False
+        self.fig, self.ax = plt.subplots()
 
     def handle_close(self, _):
         self.display_closed = True
@@ -43,12 +44,11 @@ class RobotDisplay:
     async def main(self):
         plt.ion()
         await self.ble_connection.connect()
-        self.fig, self.ax = plt.subplots()
         try:
             request = json.dumps({"command": "arena"}).encode()
             print(f"Sending request for arena: {request}")
             await self.ble_connection.send_uart_data(request)
-            plt.gcf().canvas.mpl_connect("close_event", self.handle_close)
+            self.fig.canvas.mpl_connect("close_event", self.handle_close)
 
             while not self.display_closed:
                 self.draw()

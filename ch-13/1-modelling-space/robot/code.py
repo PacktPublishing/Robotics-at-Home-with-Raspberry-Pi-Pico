@@ -4,6 +4,9 @@ import json
 import arena
 import robot
 
+def send_json(data):
+  robot.uart.write((json.dumps(data)+"\n").encode())
+
 
 async def command_handler():
   while True:
@@ -17,11 +20,10 @@ async def command_handler():
         continue
       # {"command": "arena"}
       if request["command"] == "arena":
-         response = {
+         send_json({
             "arena": arena.boundary_lines,
             "target_zone": arena.target_zone,
-         }
-         robot.uart.write((json.dumps(response)+"\n").encode())
+         })
     await asyncio.sleep(0.1)
 
 asyncio.run(command_handler())
