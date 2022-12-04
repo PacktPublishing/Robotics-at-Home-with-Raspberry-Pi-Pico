@@ -17,6 +17,8 @@ class Simulation:
         # while less "pythonic" it is more "numpyish"
         self.poses = np.empty((3, 0), dtype=np.float)
         self.regenerate_poses()
+        self.mean = np.array((arena.width / 2, arena.height / 2, 180), dtype=np.float)
+        self.std = np.array((arena.width / 4, arena.height / 4, 180), dtype=np.float)
 
     def regenerate_poses(self):
         # determine the number
@@ -24,26 +26,28 @@ class Simulation:
         new_poses = np.empty((3, number_to_make), dtype=np.float)
         # determine the mean and std for new poses
         if len(self.poses[0]) > 0:
-            mean = np.mean(self.poses, 0)
-            std = np.std(self.poses, 0)
+            self.mean = np.mean(self.poses, 0)
+            self.std = np.std(self.poses, 0)
         else:
-            mean = np.array((arena.width / 2, arena.height / 2, 180))
-            std = np.array((arena.width / 4, arena.height / 4, 180))
+            self.mean = np.array((arena.width / 2, arena.height / 2, 180))
+            self.std = np.array((arena.width / 4, arena.height / 4, 180))
         print("mean.shape :", mean.shape)
         print("std.shape :", std.shape)
 
         # generate new poses
         print(f"Generating {number_to_make} new poses.")
         for n in range(number_to_make):
-            new_poses[0, n] = get_gaussian_sample(mean[0], std[0])
-            new_poses[1, n] = get_gaussian_sample(mean[1], std[1])
-            new_poses[2, n] = get_gaussian_sample(mean[2], std[2])
+            new_poses[0, n] = get_gaussian_sample(self.mean[0], self.std[0])
+            new_poses[1, n] = get_gaussian_sample(self.mean[1], self.std[1])
+            new_poses[2, n] = get_gaussian_sample(self.mean[2], self.std[2])
         # set poses to concatenation of new poses and remaining poses
         self.poses = np.concatenate((self.poses, new_poses), axis=1)
 
     # hmm - cannot expand, or resize np arrays.
     # maybe we use normal py arrays apart from the mean/std bit?
     # a real numpy whizz may have a better way.
+    
+    
 
     async def move_robot(self):
         starting_heading = robot.imu.euler[0]
@@ -224,6 +228,8 @@ async def updater(simulation):
         send_json(
             {
                 "poses": simulation.poses.transpose().tolist(),
+                "std": simulation.std.tolist(),
+                "mean": simulation.mean.tolist(),
             }
         )
         await asyncio.sleep(0.5)

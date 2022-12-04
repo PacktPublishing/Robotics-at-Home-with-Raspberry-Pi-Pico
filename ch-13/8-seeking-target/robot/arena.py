@@ -10,6 +10,33 @@ boundary_lines = [
     [(1000, 0), (0, 0)],
 ]
 
+width = 1500
+height = 1500
+
+def get_binary_occupancy_grid():
+  ## Convert the boundary lines to a grid map
+  ## with 50mm resolution
+  grid_size = 50
+  overscan_in_cells = 5
+  grid_width = int(width / grid_size) + 2 * overscan_in_cells
+  grid_height = int(height / grid_size) + 2 * overscan_in_cells
+  grid = [[0 for x in range(grid_width)] for y in range(grid_height)]
+  for scan_line in range(grid_height):
+    scan_y = (scan_line - overscan_in_cells) * grid_size
+    if scan_y < 0 or scan_y > height:
+      grid[scan_line] = [1 for x in range(grid_width)]
+      continue
+    # For each line, set the left overscan to 1
+    # and the right overscan to 1, but account for the cutout
+    grid[scan_line][0:overscan_in_cells] = [1 for x in range(overscan_in_cells)]
+    if scan_y < 500:
+      cutout_start = int(1000 / grid_size)
+      grid[scan_line][overscan_in_cells + cutout_start:] = [1 for x in range(grid_width - overscan_in_cells - cutout_start)]
+    else:
+      grid[scan_line][overscan_in_cells + int(width / grid_size):] = [1 for x in range(grid_width - overscan_in_cells - int(width / grid_size))]
+
+  return grid
+
 
 target_zone = [
   [(1100, 900), (1100, 1100)],
@@ -17,9 +44,8 @@ target_zone = [
   [(1250, 1100), (1250, 900)],
   [(1250, 900), (1100, 900)],
 ]
+target_zone_middle = (1175, 1000)
 
-width = 1500
-height = 1500
 
 def point_is_inside_arena(x, y):
   """Return True if the point is inside the arena"""
@@ -63,3 +89,20 @@ def point_near_boundaries(point_x, point_y, distance):
     if distance_from_line_segment(line_segment, point_x, point_y) < distance:
       return True
   return False
+
+def heading_for_target_zone_middle(point_x, point_y):
+  """Return the heading to the middle of the target zone"""
+  # get the heading to the middle of the target zone
+  heading = math.atan2(target_zone_middle[1] - point_y, target_zone_middle[0] - point_x)
+  # convert to degrees
+  heading = math.degrees(heading)
+  # convert to compass heading
+  heading = 90 - heading
+  # convert to 0-360
+  if heading < 0:
+    heading += 360
+  return heading
+
+def distance_to_target_zone_middle(point_x, point_y):
+  """Return the distance to the middle of the target zone"""
+  return math.sqrt((target_zone_middle[0] - point_x) ** 2 + (target_zone_middle[1] - point_y) ** 2)
