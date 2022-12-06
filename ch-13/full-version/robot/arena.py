@@ -13,6 +13,8 @@ boundary_lines = [
 width = 1500
 height = 1500
 
+# need to state clearly the orientation of the heading
+# if coordinates 0, 0 is bottom left, then heading 0 is right, with heading increasing anticlockwise.
 
 def point_is_inside_arena(x, y):
   """Return True if the point is inside the arena.
@@ -46,7 +48,7 @@ def get_ray_distance_to_segment_squared(ray, segment):
     # calculate the x value of the intersection point
     intersection_x = ray_x + (segment_y1 - ray_y) / math.tan(ray_heading)
     # is the intersection point on the segment?
-    if intersection_x < segment_x1 or intersection_x > segment_x2:
+    if intersection_x > max(segment_x1, segment_x2) or intersection_x < min(segment_x1, segment_x2):
       return None
     # calculate the distance from the ray origin to the intersection point
     return (intersection_x - ray_x) ** 2 + (segment_y1 - ray_y) ** 2
@@ -55,13 +57,13 @@ def get_ray_distance_to_segment_squared(ray, segment):
     # if the ray is vertical, it will never intersect the segment
     if ray_heading == math.pi / 2:
       return None
-    # calculate the y value of the intersection point
+    # calculate the y value of the intersection point 
     intersection_y = ray_y + (segment_x1 - ray_x) * math.tan(ray_heading)
     # is the intersection point on the segment?
-    if intersection_y < segment_y1 or intersection_y > segment_y2:
+    if intersection_y > max(segment_y1, segment_y2) or intersection_y < min(segment_y1, segment_y2):
       return None
     # calculate the distance from the ray origin to the intersection point
-    return (segment_x1 - ray_x) ** 2 + (intersection_y - ray_y) ** 2
+    return (intersection_y - ray_y) ** 2 + (segment_x1 - ray_x) ** 2 
   else:
     raise Exception("Segment is not horizontal or vertical")
 

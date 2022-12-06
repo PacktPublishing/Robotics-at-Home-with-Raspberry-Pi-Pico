@@ -18,7 +18,6 @@ class Simulation:
         self.population_size = 200
         self.left_distance = 100
         self.right_distance = 100
-        self.occupancy_grid = arena.get_binary_occupancy_grid()
         self.time_step = 0.1
         # Poses - each an array of [x, y, heading]
         self.poses = np.array(
@@ -33,7 +32,7 @@ class Simulation:
         self.turn_pid = pid_controller.PIDController(0.1, 0.01, 0.01)
         self.distance_aim = 100
 
-    def apply_sensor_model(self, distance_left, distance_right):
+    def apply_sensor_model(self):
         # Based on vl53l1x sensor readings, create weight for each pose.
         # vl53l1x standard dev is +/- 5 mm. Each distance is a mean reading
         # we will first determine sensor positions based on poses
@@ -42,12 +41,13 @@ class Simulation:
         # and weight accordingly
 
         # distance sensor positions projected forward. left_x, left_y, right_x, right_y
-        distance_sensor_positions = np.array(
-            (self.poses.shape[0], 6), dtype=np.float)
+        distance_sensor_positions = np.zeros(
+            (self.poses.shape[0], 4), dtype=np.float)
         # sensors - they are facing forward, either side of the robot. Project them out to the sides
         # based on each poses heading
         # left sensor
         poses_left_90 = np.radians(self.poses[:, 2] + 90)
+        # print("poses_left_90_shape:",poses_left_90.shape, "distance_sensor_positions_shape:",distance_sensor_positions.shape, "poses_shape:",self.poses.shape)
         distance_sensor_positions[:, 0] = self.poses[:, 0] + np.cos(poses_left_90) * robot.distance_sensor_from_middle
         distance_sensor_positions[:, 1] = self.poses[:, 1] + np.sin(poses_left_90) * robot.distance_sensor_from_middle
         # right sensor
@@ -56,8 +56,8 @@ class Simulation:
         distance_sensor_positions[:, 3] = self.poses[:, 1] + np.sin(poses_right_90) * robot.distance_sensor_from_middle
         # for each sensor position, find the distance to the nearest obstacle
         distance_sensor_standard_dev = 5
-        dl_squared = distance_left ** 2
-        dr_squared = distance_right ** 2
+        dl_squared = self.left_distance ** 2
+        dr_squared = self.right_distance ** 2
 
         # weighted poses a numpy array of weights for each pose
         weights = np.empty(self.poses.shape[0], dtype=np.float)
@@ -69,15 +69,21 @@ class Simulation:
                 weights[index] = 0
                 continue
             # left sensor
-            left_ray = sensor_position[0], sensor_position[1], self.poses[index, 2]
+            left_ray = sensor_position[0], sensor_position[1], np.radians(self.poses[index, 2])
             noise = get_gaussian_sample(0, distance_sensor_standard_dev)
-            left_actual = arena.get_ray_distance_squared_to_nearest_boundary_segment(left_ray) + noise
-            left_error = abs(left_actual - dl_squared) # error
+            left_actual = arena.get_ray_distance_squared_to_nearest_boundary_segment(left_ray)
+            if left_actual is None:
+                print("left_actual is None. Ray was ", left_ray)
+                left_actual = 100
+            left_error = abs(left_actual - dl_squared + noise) # error
             # right sensor
-            right_ray = sensor_position[2], sensor_position[3], self.poses[index, 2]
+            right_ray = sensor_position[2], sensor_position[3], np.radians(self.poses[index, 2])
             noise = get_gaussian_sample(0, distance_sensor_standard_dev)
-            right_actual = arena.get_ray_distance_squared_to_nearest_boundary_segment(right_ray) + noise
-            right_error = abs(right_actual - dr_squared) #error
+            right_actual = arena.get_ray_distance_squared_to_nearest_boundary_segment(right_ray)
+            if right_actual is None:
+                print("right_actual is None. Ray was ", right_ray)
+                right_actual = 100
+            right_error = abs(right_actual - dr_squared + noise) #error
             # weight is the inverse of the error
             weights[index] = 1 / (left_error + right_error)
 
