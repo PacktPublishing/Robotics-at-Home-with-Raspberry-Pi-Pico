@@ -28,8 +28,8 @@ class Simulation:
         # speed is proportional to distance from wall -> further we are from wall, faster we can go
         # turn is proportional to difference between left and right distance sensors.
 
-        self.forward_distance_pid = pid_controller.PIDController(0.1, 0.01, 0.01)
-        self.turn_pid = pid_controller.PIDController(0.1, 0.01, 0.01)
+        self.forward_distance_pid = pid_controller.PIDController(0.01, 0.001, 0.001)
+        self.turn_pid = pid_controller.PIDController(0.01, 0.001, 0.001)
         self.distance_aim = 100
 
     def apply_sensor_model(self):
@@ -88,7 +88,9 @@ class Simulation:
             weights[index] = 1 / (left_error + right_error)
 
         #normalise the weights
+        print("Weights sum before normalising:", np.sum(weights))
         weights = weights / np.sum(weights)
+        print("Weights sum:", np.sum(weights))
         return weights
 
     def resample(self, weights):
@@ -107,7 +109,7 @@ class Simulation:
                 cumulative_weights += weights[source_index]
             samples.append(source_index)
         # set poses to the resampled poses
-        self.poses = self.poses[samples]
+        self.poses = np.array([self.poses[n] for n in samples])
 
     async def move_robot(self):
         """move forward, apply the motion model"""
@@ -116,13 +118,14 @@ class Simulation:
         encoder_right = robot.right_encoder.read()
 
         # move forward - use distance sensor to determine how far to go
-        distance_error = self.distance_aim - min(self.left_distance, self.right_distance)
+        print("left_distance:", self.left_distance, "right_distance:", self.right_distance)
+        distance_error = min(self.left_distance, self.right_distance) - self.distance_aim 
         forward_speed = self.forward_distance_pid.calculate(distance_error, self.time_step)
         turn_error = self.left_distance - self.right_distance
         turn_speed = self.turn_pid.calculate(turn_error, self.time_step)
-
-        robot.set_left(forward_speed + turn_speed)
-        robot.set_right(forward_speed - turn_speed)
+        print("forward_speed:", forward_speed, "turn_speed:", turn_speed)
+        # robot.set_left(forward_speed + turn_speed)
+        # robot.set_right(forward_speed - turn_speed)
 
         await asyncio.sleep(self.time_step)
         # record sensor changes
@@ -140,13 +143,14 @@ class Simulation:
         heading_standard_dev = 2 # degrees
         speed_standard_dev = 5 # mm
 
-        radians = np.radians(self.poses[2])
-        heading_model = [get_gaussian_sample(0, heading_standard_dev) for _ in range(self.poses.shape[1])]
-        speed_model = [get_gaussian_sample(speed_in_mm, speed_standard_dev) for _ in range(self.poses.shape[1])]
+        radians = np.radians(self.poses[:,2])
+        heading_model = np.array([get_gaussian_sample(0, heading_standard_dev) for _ in range(self.poses.shape[0])])
+        speed_model = np.array([get_gaussian_sample(speed_in_mm, speed_standard_dev) for _ in range(self.poses.shape[0])])
+        # print("Radians shape:", radians.shape, "heading_model shape:", len(heading_model), "speed_model shape:", len(speed_model), "poses shape:", self.poses.shape)
         self.poses[:,0] += speed_model * np.cos(radians)
         self.poses[:,1] += speed_model * np.sin(radians)
-        self.poses[:,2] += np.full(self.poses[2].shape, heading_change + heading_model)
-        self.poses[:,2] = np.vectorize(lambda n: n % 360)(self.poses[2])
+        self.poses[:,2] += heading_change + heading_model
+        self.poses[:,2] = np.vectorize(lambda n: float(n % 360))(self.poses[:,2])
 
     async def distance_sensor_updater(self):
         robot.left_distance.start_ranging()
@@ -163,10 +167,14 @@ class Simulation:
     async def run(self):
         asyncio.create_task(self.distance_sensor_updater())
         try:
-            for _ in range(15):
+            while True:
+                print("Applying sensor model")
                 weights = self.apply_sensor_model()
+                print("Sensor model complete.\nResampling")
                 self.resample(weights)
+                print("Resampling complete.\nMoving robot")
                 await self.move_robot()
+                print("Robot move complete")
         finally:
             robot.stop()
 
@@ -207,18 +215,22 @@ async def updater(simulation):
                     }
                 }
             )
-        send_json(
-            {
-                "poses": simulation.poses.tolist(),
-            }
-        )
+        # The big time delay is in sending the poses.
+        print("Sending poses", simulation.poses.shape[0])
+        for n in range(0, simulation.poses.shape[0], 10):
+            print("Sending poses from ", n, "to", n+10, "of", simulation.poses.shape[0], "poses")
+            send_json({
+                "poses": simulation.poses[n:n+10].tolist(),
+                "offset": n,
+            })
+            await asyncio.sleep(0.01)
         await asyncio.sleep(0.5)
 
 
 async def command_handler(simulation):
-    update_task = asyncio.create_task(updater(simulation))
-    simulation_task = asyncio.create_task(simulation.run())
     print("Starting handler")
+    update_task = None
+    simulation_task = None
     while True:
         if robot.uart.in_waiting:
             print("Receiving data...")
@@ -232,6 +244,11 @@ async def command_handler(simulation):
                         "arena": arena.boundary_lines
                     }
                 )
+                if not update_task:
+                    update_task = asyncio.create_task(updater(simulation))
+            elif request["command"] == "start":
+                simulation_task = asyncio.create_task(simulation.run())
+
         await asyncio.sleep(0.1)
 
 
