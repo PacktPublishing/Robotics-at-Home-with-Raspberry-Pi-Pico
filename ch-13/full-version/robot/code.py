@@ -5,7 +5,6 @@ from ulab import numpy as np
 from guassian import get_gaussian_sample
 import arena
 import robot
-import pid_controller
 
 # initial sample set - uniform
 # then apply sensor model
@@ -18,18 +17,11 @@ class Simulation:
         self.population_size = 200
         self.left_distance = 100
         self.right_distance = 100
-        self.time_step = 0.1
         # Poses - each an array of [x, y, heading]
         self.poses = np.array(
             [(random.uniform(0, arena.width), random.uniform(0, arena.height), random.uniform(0, 360)) for _ in range(self.population_size)],
             dtype=np.float,
         )
-        # use pids to avoid collisions
-        # speed is proportional to distance from wall -> further we are from wall, faster we can go
-        # turn is proportional to difference between left and right distance sensors.
-
-        self.forward_distance_pid = pid_controller.PIDController(0.01, 0.001, 0.001)
-        self.turn_pid = pid_controller.PIDController(0.01, 0.001, 0.001)
         self.distance_aim = 100
 
     def apply_sensor_model(self):
@@ -117,17 +109,26 @@ class Simulation:
         encoder_left = robot.left_encoder.read()
         encoder_right = robot.right_encoder.read()
 
-        # move forward - use distance sensor to determine how far to go
+        # move forward - with collision avoidance
         print("left_distance:", self.left_distance, "right_distance:", self.right_distance)
-        distance_error = min(self.left_distance, self.right_distance) - self.distance_aim 
-        forward_speed = self.forward_distance_pid.calculate(distance_error, self.time_step)
-        turn_error = self.left_distance - self.right_distance
-        turn_speed = self.turn_pid.calculate(turn_error, self.time_step)
+        if min(self.left_distance, self.right_distance) < self.distance_aim:
+            # we are too close to the wall
+            # turn away from the wall
+            # turn right if left distance is smaller
+            # turn left if right distance is smaller
+            forward_speed = 0
+            if self.left_distance < self.right_distance:
+                # turn right
+                turn_speed = -0.5
+            else:
+                turn_speed = 0.5
+        else:
+            forward_speed = 0.8
         print("forward_speed:", forward_speed, "turn_speed:", turn_speed)
-        # robot.set_left(forward_speed + turn_speed)
-        # robot.set_right(forward_speed - turn_speed)
+        robot.set_left(forward_speed + turn_speed)
+        robot.set_right(forward_speed - turn_speed)
 
-        await asyncio.sleep(self.time_step)
+        await asyncio.sleep(0.05)
         # record sensor changes
         left_movement = robot.left_encoder.read() - encoder_left
         right_movement = robot.right_encoder.read() - encoder_right
@@ -146,9 +147,8 @@ class Simulation:
         radians = np.radians(self.poses[:,2])
         heading_model = np.array([get_gaussian_sample(0, heading_standard_dev) for _ in range(self.poses.shape[0])])
         speed_model = np.array([get_gaussian_sample(speed_in_mm, speed_standard_dev) for _ in range(self.poses.shape[0])])
-        # print("Radians shape:", radians.shape, "heading_model shape:", len(heading_model), "speed_model shape:", len(speed_model), "poses shape:", self.poses.shape)
-        self.poses[:,0] += speed_model * np.cos(radians)
-        self.poses[:,1] += speed_model * np.sin(radians)
+        self.poses[:,0] += speed_model * np.sin(radians)
+        self.poses[:,1] += speed_model * np.cos(radians)
         self.poses[:,2] += heading_change + heading_model
         self.poses[:,2] = np.vectorize(lambda n: float(n % 360))(self.poses[:,2])
 
@@ -162,19 +162,19 @@ class Simulation:
             if robot.right_distance.data_ready and robot.right_distance.distance:
                 self.right_distance = robot.right_distance.distance * 10
                 robot.right_distance.clear_interrupt()
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.01)
 
     async def run(self):
         asyncio.create_task(self.distance_sensor_updater())
         try:
             while True:
-                print("Applying sensor model")
+                # print("Applying sensor model")
                 weights = self.apply_sensor_model()
-                print("Sensor model complete.\nResampling")
+                # print("Sensor model complete.\nResampling")
                 self.resample(weights)
-                print("Resampling complete.\nMoving robot")
+                # print("Resampling complete.\nMoving robot")
                 await self.move_robot()
-                print("Robot move complete")
+                # print("Robot move complete")
         finally:
             robot.stop()
 
@@ -218,7 +218,7 @@ async def updater(simulation):
         # The big time delay is in sending the poses.
         print("Sending poses", simulation.poses.shape[0])
         for n in range(0, simulation.poses.shape[0], 10):
-            print("Sending poses from ", n, "to", n+10, "of", simulation.poses.shape[0], "poses")
+            # print("Sending poses from ", n, "to", n+10, "of", simulation.poses.shape[0], "poses")
             send_json({
                 "poses": simulation.poses[n:n+10].tolist(),
                 "offset": n,
