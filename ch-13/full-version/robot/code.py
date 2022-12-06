@@ -65,7 +65,9 @@ class Simulation:
         for index, sensor_position in enumerate(distance_sensor_positions):
             # difference between this distance and the distance sensed is the error
             # add noise to this error
-
+            if not arena.point_is_inside_arena(self.poses[index,0], self.poses[index,1]):
+                weights[index] = 0
+                continue
             # left sensor
             left_ray = sensor_position[0], sensor_position[1], self.poses[index, 2]
             noise = get_gaussian_sample(0, distance_sensor_standard_dev)
@@ -78,6 +80,7 @@ class Simulation:
             right_error = abs(right_actual - dr_squared) #error
             # weight is the inverse of the error
             weights[index] = 1 / (left_error + right_error)
+
         #normalise the weights
         weights = weights / np.sum(weights)
         return weights
