@@ -14,7 +14,7 @@ class RobotDisplay:
         self.arena = {}
         self.display_closed = False
         self.fig, self.ax = plt.subplots()
-        self.poses = np.zeros([200, 3], dtype=np.float32)
+        self.poses = np.zeros([200, 3], dtype=np.int16)
 
     def handle_close(self, _):
         self.display_closed = True
@@ -35,7 +35,10 @@ class RobotDisplay:
                 self.arena = message
             if "poses" in message:
                 print(message)
-                self.poses[message["offset"]: message["offset"] + len(message["poses"])] = message["poses"]
+                incoming_poses = np.array(message["poses"], dtype=np.int16)
+                print("Incoming poses shape", incoming_poses.shape)
+                print("Existing poses shape", self.poses.shape)
+                self.poses[message["offset"]: message["offset"] + incoming_poses.shape[0]] = incoming_poses
 
     def draw(self):
         self.ax.clear()
