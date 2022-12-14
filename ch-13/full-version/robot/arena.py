@@ -1,5 +1,8 @@
 """Represent the lines and target zone of the arena"""
-import math
+try:
+  from ulab import numpy as np
+except ImportError:
+  import numpy as np
 
 boundary_lines = [
     [(0,0), (0, 1500)],
@@ -29,60 +32,55 @@ def point_is_inside_arena(x, y):
     return False
   return True
 
-## intention - we can use a distance squared function to avoid the square root, and just square the distance sensor readings too.
-def get_ray_distance_to_segment_squared(ray_x, ray_y, ray_tan, ray_heading, segment):
-  """Return the distance squared from the ray origin to the intersection point along the given ray heading.
-  The segments are boundary lines, which will be horizontal or vertical, and have known lengths.
-  The ray can have any heading, and will be infinite in length.
-  Ray -> (x, y, heading)
-  ray_tan -> tangent of the heading (optimization)
+def get_point_distance_to_segment(x, y, segment):
+  """Return the distance squared from the point to the segment.
   Segment -> ((x1, y1), (x2, y2))
+  All segments are horizontal or vertical.
   """
   segment_x1, segment_y1 = segment[0]
   segment_x2, segment_y2 = segment[1]
-  # if the segment is horizontal, the ray will intersect it at a known y value
-  if segment_y1 == segment_y2:
-    # if the ray is horizontal, it will never intersect the segment
-    if ray_heading == 0:
-      return None
-    # calculate the x value of the intersection point
-    intersection_x = ray_x + (segment_y1 - ray_y) / ray_tan
-    # is the intersection point on the segment?
-    if intersection_x > max(segment_x1, segment_x2) or intersection_x < min(segment_x1, segment_x2):
-      return None
-    # calculate the distance from the ray origin to the intersection point
-    return (intersection_x - ray_x) ** 2 + (segment_y1 - ray_y) ** 2
-  # if the segment is vertical, the ray will intersect it at a known x value
-  if segment_x1 == segment_x2:
-    # if the ray is vertical, it will never intersect the segment
-    if ray_heading == math.pi / 2:
-      return None
-    # calculate the y value of the intersection point 
-    intersection_y = ray_y + (segment_x1 - ray_x) * ray_tan
-    # is the intersection point on the segment?
-    if intersection_y > max(segment_y1, segment_y2) or intersection_y < min(segment_y1, segment_y2):
-      return None
-    # calculate the distance from the ray origin to the intersection point
-    return (intersection_y - ray_y) ** 2 + (segment_x1 - ray_x) ** 2 
-  else:
-    raise Exception("Segment is not horizontal or vertical")
+  # if the segment is horizontal, the point will be closest to the y value of the segment
+  if segment_y1 == segment_y2 and x >= min(segment_x1, segment_x2) and x <= max(segment_x1, segment_x2):
+      return abs(y - segment_y1)
+  # if the segment is vertical, the point will be closest to the x value of the segment
+  if segment_x1 == segment_x2 and y >= min(segment_y1, segment_y2) and y <= max(segment_y1, segment_y2):
+      return abs(x - segment_x1)
+  # the point will be closest to one of the end points
+  return np.sqrt(min((x - segment_x1) ** 2 + (y - segment_y1) ** 2, (x - segment_x2) ** 2 + (y - segment_y2) ** 2))
 
-def get_ray_distance_squared_to_nearest_boundary_segment(ray):
-  """Return the distance from the ray origin to the intersection point along the given ray heading.
-  The segments are boundary lines, which will be horizontal or vertical, and have known lengths.
-  The ray can have any heading, and will be infinite in length.
-  Ray -> (x, y, heading)
+
+def get_point_decay_from_nearest_segment(segments, x, y):
+  """Return the distance from the point to the nearest segment as a decay function."""
+  max_decay = None
+  for segment in segments:
+    decay = 1.0 / max(1, get_point_distance_to_segment(x, y, segment))
+    if max_decay is None or decay > max_decay:
+      max_decay = decay
+  return max_decay
+
+
+grid_cell_size = 50
+overscan = 10 # 10 each way
+
+# beam endpoint model
+def make_distance_grid():
+  """Take the boundary lines. With and overscan of 10 cells, and grid cell size of 5cm (50mm),
+  make a grid of the distance to the nearest boundary line.
   """
-  # find the distance to each segment
-  distances = []
-  ray_x, ray_y, ray_heading = ray
-  ray_tan = math.tan(ray_heading)
-  for segment in boundary_lines:
-    distance_squared = get_ray_distance_to_segment_squared(ray_x, ray_y, ray_tan, ray_heading, segment)
-    if distance_squared is not None:
-      distances.append(distance_squared)
-  # return the minimum distance
-  if distances:
-    return min(distances)
-  else:
-    return None
+  grid = np.zeros((width // grid_cell_size + 2 * overscan, height // grid_cell_size + 2 * overscan), dtype=np.float)
+  for x in range(grid.shape[0]):
+    column_x = x * grid_cell_size - (overscan * grid_cell_size)
+    for y in range(grid.shape[1]):
+      value = get_point_decay_from_nearest_segment(boundary_lines, column_x, y * grid_cell_size - (overscan * grid_cell_size))
+      grid[x, y] = value
+  return grid
+
+distance_grid = make_distance_grid()
+
+def get_distance_grid_at_point(x, y):
+  """Return the distance grid value at the given point."""
+  grid_x = int(x // grid_cell_size + overscan)
+  grid_y = int(y // grid_cell_size + overscan)
+  if grid_x < 0 or grid_x >= distance_grid.shape[0] or grid_y < 0 or grid_y >= distance_grid.shape[1]:
+    return 0
+  return distance_grid[grid_x, grid_y]
