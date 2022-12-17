@@ -25,7 +25,8 @@ while True:
     current_time = time.monotonic()
     deflection = distance_controller.calculate(error, current_time - prev_time)
     prev_time = current_time
-    uart.write(f"{error},{deflection}\n".encode()) # ,{distance_controller.derivative}
+    uart.write(f"{error},{deflection},"
+      f"{distance_controller.derivative}\n".encode())
     if motors_active:
       robot.set_left(speed - deflection)
       robot.set_right(speed + deflection)
