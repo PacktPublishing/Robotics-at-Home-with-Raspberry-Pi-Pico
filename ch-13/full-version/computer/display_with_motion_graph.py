@@ -13,7 +13,7 @@ class RobotDisplay:
         self.line = ""
         self.arena = {}
         self.display_closed = False
-        self.fig, self.ax = plt.subplots()
+        self.fig, (self.ax1, self.ax2) = plt.subplots(nrows=2)
         self.poses = np.zeros([200, 3], dtype=np.int16)
         self.motion = np.zeros([200, 3], dtype=float)
 
@@ -37,21 +37,23 @@ class RobotDisplay:
             if "poses" in message:
                 print(message)
                 incoming_poses = np.array(message["poses"], dtype=np.int16)
-                print("Incoming poses shape", incoming_poses.shape)
-                print("Existing poses shape", self.poses.shape)
                 self.poses[message["offset"]: message["offset"] + incoming_poses.shape[0]] = incoming_poses
             if "motion" in message:
-                np.roll(self.motion, 1, axis=0)
+                self.motion = np.roll(self.motion, 1, axis=0)
                 self.motion[0] = [message["motion"]["rot1"], message["motion"]["trans"], message["motion"]["rot2"]]
+                print(self.motion[1])
 
     def draw(self):
-        self.ax.clear()
+        self.ax1.clear()
         if self.arena:
             for line in self.arena["arena"]:
-                self.ax.plot(
+                self.ax1.plot(
                     [line[0][0], line[1][0]], [line[0][1], line[1][1]], color="black"
-                )
-        self.ax.scatter(self.poses[:,0], self.poses[:,1], color="blue")
+                )                
+        self.ax1.scatter(self.poses[:,0], self.poses[:,1], color="blue")
+        self.ax2.clear()
+        self.ax2.plot(np.arange(200), self.motion)
+        
 
     async def send_command(self, command):
         #+ "\n" - why does adding this (which sounds right) cause the ble stack (on the robot or computer? ) not to work any more?
@@ -75,7 +77,6 @@ class RobotDisplay:
             start_button.on_clicked(self.start)
             # stop_button = Button(plt.axes([0.81, 0.05, 0.1, 0.075]), "Stop")
             # stop_button.on_clicked(self.stop)
-
             while not self.display_closed:
                 self.draw()
                 plt.draw()

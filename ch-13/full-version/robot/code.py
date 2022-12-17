@@ -5,27 +5,34 @@ from ulab import numpy as np
 import arena
 import robot
 
-class VaryingWallAvoid:
+class CollisionAvoid:
     def __init__(self):
         self.speed = 0.6
-
-    def speed_from_distance(self, distance):
-        limited_error = min(distance, 300) * self.speed
-        motor_speed = limited_error / 300
-        if motor_speed < 0.2:
-            motor_speed = -0.3
-        return motor_speed
+        self.left_distance = 300
+        self.right_distance = 300
 
     def update(self, left_distance, right_distance):
-        left = self.speed_from_distance(left_distance)
-        right = self.speed_from_distance(right_distance)
-        robot.set_left(left)
-        robot.set_right(right)
+        self.left_distance = left_distance
+        self.right_distance = right_distance
+
+    async def run(self):
+        while True:
+            robot.set_right(self.speed)
+            while self.left_distance < 300 or self.right_distance < 300:
+                robot.set_left(-0.6)
+                await asyncio.sleep(0.3)
+            robot.set_left(self.speed)
+            await asyncio.sleep(0)
+
 
 triangular_proportion = np.sqrt(6) / 2
 def get_triangular_sample(mean, standard_deviation):
     base = triangular_proportion * (random.uniform(-standard_deviation, standard_deviation) + random.uniform(-standard_deviation, standard_deviation))
     return mean + base
+
+
+def send_json(data):
+    robot.uart.write((json.dumps(data) + "\n").encode())
 
 class Simulation:
     def __init__(self):
@@ -45,7 +52,7 @@ class Simulation:
                 int(random.uniform(0, 360))) for _ in range(self.population_size)],
             dtype=np.int16,
         )
-        self.collision_avoider = VaryingWallAvoid()
+        self.collision_avoider = CollisionAvoid()
 
     async def apply_sensor_model(self):
         # Based on vl53l1x sensor readings, create weight for each pose.
@@ -84,6 +91,7 @@ class Simulation:
             # remove any that are outside the arena
             if not arena.point_is_inside_arena(self.poses[index,0], self.poses[index,1]):
                 weights[index] = 0
+                print("pose outside arena")
                 continue
             # difference between this distance and the distance sensed is the error
             # weight is the inverse of the error
@@ -140,26 +148,34 @@ class Simulation:
 
     async def motion_model(self):
         """move forward, apply the motion model"""
-        starting_heading = robot.imu.euler[0]
-        encoder_left = robot.left_encoder.read()
-        encoder_right = robot.right_encoder.read()
+        new_heading = robot.imu.euler[0]
+        new_encoder_left = robot.left_encoder.read()
+        new_encoder_right = robot.right_encoder.read()
 
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0)
         rot1, trans, rot2 = self.convert_odometry_to_motion(
-            robot.left_encoder.read() - encoder_left, 
-            robot.right_encoder.read() - encoder_right)
-
+            new_encoder_left - self.last_encoder_left, 
+            new_encoder_right - self.last_encoder_right)            
+        send_json({"motion": {
+            "rot1": rot1,
+            "trans": trans,
+            "rot2": rot2
+        }})
+        self.last_encoder_left = new_encoder_left
+        self.last_encoder_right = new_encoder_right
         try:
             new_heading = robot.imu.euler[0]
         except OSError:
             new_heading = None
         if new_heading:
-            heading_change = starting_heading - new_heading
+            heading_change = self.last_heading - new_heading
+            self.last_heading = new_heading
             # blend with the encoder heading changes
             rot1 = rot1 * self.encoder_mix + heading_change * self.imu_mix
             rot2 = rot2 * self.encoder_mix + heading_change * self.imu_mix
         else:
             print("Failed to get heading")
+        await asyncio.sleep(0)            
         rot1_model = np.array([get_triangular_sample(rot1, self.rotation_standard_dev) for _ in range(self.poses.shape[0])])
         trans_model = np.array([get_triangular_sample(trans, self.speed_standard_dev) for _ in range(self.poses.shape[0])])
         rot2_model = np.array([get_triangular_sample(rot2, self.rotation_standard_dev) for _ in range(self.poses.shape[0])])
@@ -190,17 +206,19 @@ class Simulation:
 
     async def run(self):
         asyncio.create_task(self.distance_sensor_updater())
+        asyncio.create_task(self.collision_avoider.run())
+        self.last_heading = robot.imu.euler[0]
+        self.last_encoder_left = robot.left_encoder.read()
+        self.last_encoder_right = robot.right_encoder.read()
+
         try:
             while True:
                 weights = await self.apply_sensor_model()
-                self.resample(weights)
+                self.poses = self.resample(weights, self.population_size)
                 await self.motion_model()
         finally:
             robot.stop()
 
-
-def send_json(data):
-    robot.uart.write((json.dumps(data) + "\n").encode())
 
 
 def read_command():
