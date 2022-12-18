@@ -13,8 +13,8 @@ class RobotDisplay:
         self.line = ""
         self.arena = {}
         self.display_closed = False
-        self.fig, (self.ax1, self.ax2) = plt.subplots(nrows=2)
-        self.poses = np.zeros([200, 3], dtype=np.int16)
+        self.fig, self.ax = plt.subplots()
+        self.poses = np.zeros([200, 2], dtype=np.int16)
         self.motion = np.zeros([200, 3], dtype=float)
 
     def handle_close(self, _):
@@ -35,24 +35,17 @@ class RobotDisplay:
             if "arena" in message:
                 self.arena = message
             if "poses" in message:
-                print(message)
                 incoming_poses = np.array(message["poses"], dtype=np.int16)
-                self.poses[message["offset"]: message["offset"] + incoming_poses.shape[0]] = incoming_poses
-            if "motion" in message:
-                self.motion = np.roll(self.motion, 1, axis=0)
-                self.motion[0] = [message["motion"]["rot1"], message["motion"]["trans"], message["motion"]["rot2"]]
-                print(self.motion[1])
+                self.poses = incoming_poses
 
     def draw(self):
-        self.ax1.clear()
+        self.ax.clear()
         if self.arena:
             for line in self.arena["arena"]:
-                self.ax1.plot(
+                self.ax.plot(
                     [line[0][0], line[1][0]], [line[0][1], line[1][1]], color="black"
                 )                
-        self.ax1.scatter(self.poses[:,0], self.poses[:,1], color="blue")
-        self.ax2.clear()
-        self.ax2.plot(np.arange(200), self.motion)
+        self.ax.scatter(self.poses[:,0], self.poses[:,1], color="blue")
         
 
     async def send_command(self, command):
