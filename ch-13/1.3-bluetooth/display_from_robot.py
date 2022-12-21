@@ -8,18 +8,18 @@ from robot_ble_connection import BleConnection
 class RobotDisplay:
     def __init__(self):
         self.ble_connection = BleConnection(self.handle_data)
-        self.line = ""
+        self.buffer = ""
         self.arena = {}
-        self.display_closed = False
+        self.closed = False
         self.fig, self.ax = plt.subplots()
 
     def handle_close(self, _):
-        self.display_closed = True
+        self.closed = True
 
     def handle_data(self, data):
-        self.line += data.decode("utf-8")
-        while "\n" in self.line:
-            line, self.line = self.line.split("\n", 1)
+        self.buffer += data.decode("utf-8")
+        while "\n" in self.buffer:
+            line, self.buffer = self.buffer.split("\n", 1)
             print(f"Received data: {line}")
             try:
                 message = json.loads(line)
@@ -36,10 +36,6 @@ class RobotDisplay:
                 self.ax.plot(
                     [line[0][0], line[1][0]], [line[0][1], line[1][1]], color="black"
                 )
-            for line in self.arena["target_zone"]:
-                self.ax.plot(
-                    [line[0][0], line[1][0]], [line[0][1], line[1][1]], color="red"
-                )
 
     async def main(self):
         plt.ion()
@@ -50,7 +46,7 @@ class RobotDisplay:
             await self.ble_connection.send_uart_data(request)
             self.fig.canvas.mpl_connect("close_event", self.handle_close)
 
-            while not self.display_closed:
+            while not self.closed:
                 self.draw()
                 plt.draw()
                 plt.pause(0.05)
