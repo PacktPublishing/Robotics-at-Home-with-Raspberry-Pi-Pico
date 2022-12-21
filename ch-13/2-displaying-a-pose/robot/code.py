@@ -6,37 +6,51 @@ from ulab import numpy as np
 import arena
 import robot
 
-class Simulation:
-  def __init__(self):
-    population_size = 10
-    self.poses = np.empty((population_size, 3), dtype=np.float)
-    for n in range(population_size):
-      self.poses[n] = random.uniform(0, arena.width), random.uniform(0, arena.height), random.uniform(0, 360)
-  
 def send_json(data):
-  robot.uart.write((json.dumps(data)+"\n").encode())
+    robot.uart.write((json.dumps(data) + "\n").encode())
+
+def read_json():
+    try:
+      data = robot.uart.readline()
+      decoded = data.decode()
+      return json.loads(decoded)
+    except (UnicodeError, ValueError):
+      print("Invalid data")
+      return None
+
+
+class Simulation:
+    def __init__(self):
+      self.population_size = 20
+      self.poses = np.array(
+          [(
+              int(random.uniform(0, arena.width)),
+              int(random.uniform(0, arena.height)),
+              int(random.uniform(0, 360))) for _ in range(self.population_size)],
+          dtype=np.int16,
+      )
+
+def send_poses(samples):
+    send_json({
+        "poses": samples[:,:2].tolist(),
+    })
 
 async def command_handler(simulation):
-  while True:
-    if robot.uart.in_waiting:
-      print("Receiving data...")
-      try:
-        data = robot.uart.readline().decode()
-        request = json.loads(data)
-      except (UnicodeError, ValueError):
-        print("Invalid data")
-        continue
-      # {"command": "arena"}
-      if request["command"] == "arena":
-         send_json({
-            "arena": arena.boundary_lines,
-            "target_zone": arena.target_zone,
-         })
-    else:
-      send_json({
-        "poses": simulation.poses.tolist(),
-      })
-    await asyncio.sleep(0.1)
+    print("Starting handler")
+    while True:
+        if robot.uart.in_waiting:
+            request = read_json()
+            if not request:
+                continue
+            print("Received: ", request)
+            if request["command"] == "arena":
+                send_json({
+                    "arena": arena.boundary_lines,
+                })
+                send_poses(simulation.poses)
 
-simulation= Simulation()
+        await asyncio.sleep(0.1)
+
+
+simulation = Simulation()
 asyncio.run(command_handler(simulation))
