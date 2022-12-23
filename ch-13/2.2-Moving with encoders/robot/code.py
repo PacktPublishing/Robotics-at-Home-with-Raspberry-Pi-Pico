@@ -65,24 +65,75 @@ def send_poses(samples):
 
 class Simulation:
     def __init__(self):
-      self.population_size = 20
-      self.poses = np.array(
-          [(
-              int(random.uniform(0, arena.width)),
-              int(random.uniform(0, arena.height)),
-              int(random.uniform(0, 360))) for _ in range(self.population_size)],
-          dtype=np.float,
-      )
-      self.distance_sensors = DistanceSensorTracker()
-      self.collision_avoider = CollisionAvoid(self.distance_sensors)
+        self.population_size = 20
+        self.poses = np.array(
+            [(
+                int(random.uniform(0, arena.width)),
+                int(random.uniform(0, arena.height)),
+                int(random.uniform(0, 360))) for _ in range(self.population_size)],
+            dtype=np.float,
+        )
+        self.distance_sensors = DistanceSensorTracker()
+        self.collision_avoider = CollisionAvoid(self.distance_sensors)
+        self.last_encoder_left = robot.left_encoder.read()
+        self.last_encoder_right = robot.right_encoder.read()
+
+
+    def convert_odometry_to_motion(self, left_encoder_delta, right_encoder_delta):
+        """
+        left_encoder is the change in the left encoder
+        right_encoder is the change in the right encoder
+        returns rot1, trans, rot2 
+        rot1 is the rotation of the robot in degrees before the translation
+        trans is the distance the robot has moved in mm
+        rot2 is the rotation of the robot in degrees
+        """
+        left_mm = left_encoder_delta * robot.ticks_to_mm
+        right_mm = right_encoder_delta * robot.ticks_to_mm
+
+        if left_mm == right_mm:
+            return 0, left_mm, 0
+
+        # calculate the radius of the arc
+        radius = (robot.wheelbase_mm / 2) * (left_mm + right_mm) / (right_mm - left_mm)
+        ## angle = difference in steps / wheelbase
+        d_theta = (right_mm - left_mm) / robot.wheelbase_mm
+        # For a small enough motion, assume that the chord length = arc length
+        arc_length = d_theta * radius
+        rot1 = np.degrees(d_theta/2)
+        rot2 = rot1
+        return rot1, arc_length, rot2
+
+    def motion_model(self):
+        """Apply the motion model"""
+        new_encoder_left = robot.left_encoder.read()
+        new_encoder_right = robot.right_encoder.read()
+
+        rot1, trans, rot2 = self.convert_odometry_to_motion(
+            new_encoder_left - self.last_encoder_left, 
+            new_encoder_right - self.last_encoder_right)
+        self.last_encoder_left = new_encoder_left
+        self.last_encoder_right = new_encoder_right
+        self.poses[:,2] += rot1
+        rot1_radians = np.radians(self.poses[:,2])
+        self.poses[:,0] += trans * np.cos(rot1_radians)
+        self.poses[:,1] += trans * np.sin(rot1_radians)
+        self.poses[:,2] += rot2
+        self.poses[:,2] = np.array([float(theta % 360) for theta in self.poses[:,2]])
+        print(
+            json.dumps(
+                [self.poses.tolist(), rot1, trans, rot2]
+            )
+        )
 
     async def main(self):
         asyncio.create_task(self.distance_sensors.main())
         asyncio.create_task(self.collision_avoider.main())
         try:
             while True:
-                await asyncio.sleep(0.1)
                 send_poses(self.poses)
+                await asyncio.sleep(0.05)
+                self.motion_model()
         finally:
             robot.stop()
 

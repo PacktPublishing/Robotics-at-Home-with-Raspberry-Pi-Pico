@@ -19,6 +19,12 @@ def read_json():
       return None
 
 
+def send_poses(samples):
+    send_json({
+        "poses": np.array(samples[:,:2], dtype=np.int16).tolist(),
+    })
+
+
 class Simulation:
     def __init__(self):
       self.population_size = 20
@@ -27,13 +33,10 @@ class Simulation:
               int(random.uniform(0, arena.width)),
               int(random.uniform(0, arena.height)),
               int(random.uniform(0, 360))) for _ in range(self.population_size)],
-          dtype=np.int16,
+          dtype=np.float,
       )
 
-def send_poses(samples):
-    send_json({
-        "poses": samples[:,:2].tolist(),
-    })
+
 
 async def command_handler(simulation):
     print("Starting handler")
