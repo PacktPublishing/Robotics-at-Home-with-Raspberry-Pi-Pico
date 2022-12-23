@@ -4,7 +4,6 @@ import pio_encoder
 import busio
 import adafruit_vl53l1x
 import math
-import busio
 import adafruit_bno055
 
 uart = busio.UART(board.GP12, board.GP13, baudrate=9600)
