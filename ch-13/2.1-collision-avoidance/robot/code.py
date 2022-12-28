@@ -78,12 +78,13 @@ class Simulation:
 
     async def main(self):
         asyncio.create_task(self.distance_sensors.main())
-        asyncio.create_task(self.collision_avoider.main())
+        collision_avoider = asyncio.create_task(self.collision_avoider.main())
         try:
             while True:
                 await asyncio.sleep(0.1)
                 send_poses(self.poses)
         finally:
+            collision_avoider.cancel()
             robot.stop()
 
 
