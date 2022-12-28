@@ -10,23 +10,21 @@ from robot_ble_connection import BleConnection
 class RobotDisplay:
     def __init__(self):
         self.ble_connection = BleConnection(self.handle_data)
-        self.line = ""
+        self.buffer = ""
         self.arena = {}
-        self.display_closed = False
+        self.closed = False
         self.fig, self.ax = plt.subplots()
-        self.poses = np.zeros([200, 3], dtype=np.int16)
+        self.poses = np.zeros([20, 2], dtype=np.int16)
         self.motion = np.zeros([200, 3], dtype=float)
 
     def handle_close(self, _):
-        self.display_closed = True
+        self.closed = True
 
     def handle_data(self, data):
-        self.line += data.decode("utf-8")
-        # print(f"Received data: {data.decode('utf-8')}")
-        # print(f"Line is now: {self.line}")
-        while "\n" in self.line:
-            line, self.line = self.line.split("\n", 1)
-            print(f"Received line: {line}")
+        self.buffer += data.decode("utf-8")
+        while "\n" in self.buffer:
+            line, self.buffer = self.buffer.split("\n", 1)
+            print(f"Received data: {line}")
             try:
                 message = json.loads(line)
             except ValueError:
@@ -35,14 +33,8 @@ class RobotDisplay:
             if "arena" in message:
                 self.arena = message
             if "poses" in message:
-                print(message)
                 incoming_poses = np.array(message["poses"], dtype=np.int16)
-                print("Incoming poses shape", incoming_poses.shape)
-                print("Existing poses shape", self.poses.shape)
-                self.poses[message["offset"]: message["offset"] + incoming_poses.shape[0]] = incoming_poses
-            if "motion" in message:
-                np.roll(self.motion, 1, axis=0)
-                self.motion[0] = [message["motion"]["rot1"], message["motion"]["trans"], message["motion"]["rot2"]]
+                self.poses = incoming_poses
 
     def draw(self):
         self.ax.clear()
@@ -54,7 +46,6 @@ class RobotDisplay:
         self.ax.scatter(self.poses[:,0], self.poses[:,1], color="blue")
 
     async def send_command(self, command):
-        #+ "\n" - why does adding this (which sounds right) cause the ble stack (on the robot or computer? ) not to work any more?
         request = (json.dumps({"command": command})  ).encode()
         print(f"Sending request: {request}")
         await self.ble_connection.send_uart_data(request)
@@ -75,8 +66,7 @@ class RobotDisplay:
             start_button.on_clicked(self.start)
             # stop_button = Button(plt.axes([0.81, 0.05, 0.1, 0.075]), "Stop")
             # stop_button.on_clicked(self.stop)
-
-            while not self.display_closed:
+            while not self.closed:
                 self.draw()
                 plt.draw()
                 plt.pause(0.05)

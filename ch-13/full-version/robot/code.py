@@ -2,34 +2,49 @@ import asyncio
 import json
 import random
 from ulab import numpy as np
+
 import arena
 import robot
 
-class CollisionAvoid:
+class DistanceSensorTracker:
     def __init__(self):
+        robot.left_distance.distance_mode = 2
+        robot.right_distance.distance_mode = 2
+        robot.left_distance.timing_budget = 50
+        robot.right_distance.timing_budget = 50
+        self.left = 300
+        self.right = 300
+
+    async def main(self):
+        robot.left_distance.start_ranging()
+        robot.right_distance.start_ranging()
+        while True:
+            if robot.left_distance.data_ready and robot.left_distance.distance:
+                self.left = robot.left_distance.distance * 10  # convert to mm
+                robot.left_distance.clear_interrupt()
+            if robot.right_distance.data_ready and robot.right_distance.distance:
+                self.right = robot.right_distance.distance * 10
+                robot.right_distance.clear_interrupt()
+            await asyncio.sleep(0.01)
+
+
+class CollisionAvoid:
+    def __init__(self, distance_sensors):
         self.speed = 0.6
-        self.left_distance = 300
-        self.right_distance = 300
+        self.distance_sensors = distance_sensors
 
-    def update(self, left_distance, right_distance):
-        self.left_distance = left_distance
-        self.right_distance = right_distance
-
-    async def run(self):
+    async def main(self):
         while True:
             robot.set_right(self.speed)
-            while self.left_distance < 300 or self.right_distance < 300:
-                robot.set_left(-0.6)
+            while self.distance_sensors.left < 300 or \
+                    self.distance_sensors.right < 300:
+                robot.set_left(-self.speed)
                 await asyncio.sleep(0.3)
             robot.set_left(self.speed)
             await asyncio.sleep(0)
 
-
-triangular_proportion = np.sqrt(6) / 2
-def get_triangular_sample(mean, standard_deviation):
-    base = triangular_proportion * (random.uniform(-standard_deviation, standard_deviation) + random.uniform(-standard_deviation, standard_deviation))
-    return mean + base
-
+def get_scaled_sample_around_mean(mean, scale):
+    return mean + (random.uniform(-scale, scale) + random.uniform(-scale, scale)) / 2
 
 def convert_to_standard_position(true_bearing):
     standard_position = 90 - true_bearing
@@ -43,22 +58,29 @@ def convert_to_standard_position(true_bearing):
 def send_json(data):
     robot.uart.write((json.dumps(data) + "\n").encode())
 
+def read_json():
+    try:
+      data = robot.uart.readline()
+      decoded = data.decode()
+      return json.loads(decoded)
+    except (UnicodeError, ValueError):
+      print("Invalid data")
+      return None
+
 
 def send_poses(samples):
     send_json({
-        "poses": samples[:,:2].tolist(),
+        "poses": np.array(samples[:,:2], dtype=np.int16).tolist(),
     })
 
 
 class Simulation:
     def __init__(self):
-        self.population_size = 300
-        self.left_distance = 100
-        self.right_distance = 100
+        self.population_size = 200
         self.imu_mix = 0.3 * 0.5
         self.encoder_mix = 0.7
-        self.rotation_standard_dev = 2 # degrees
-        self.speed_standard_dev = 5 # mm
+        self.rotation_scale = 0.5 # degrees
+        self.speed_scale = 3 # mm
 
         # Poses - each an array of [x, y, heading]
         self.poses = np.array(
@@ -66,9 +88,12 @@ class Simulation:
                 int(random.uniform(0, arena.width)),
                 int(random.uniform(0, arena.height)),
                 int(random.uniform(0, 360))) for _ in range(self.population_size)],
-            dtype=np.int16,
+            dtype=np.float,
         )
-        self.collision_avoider = CollisionAvoid()
+        self.distance_sensors = DistanceSensorTracker()
+        self.collision_avoider = CollisionAvoid(self.distance_sensors)
+        self.last_encoder_left = robot.left_encoder.read()
+        self.last_encoder_right = robot.right_encoder.read()
 
     async def apply_sensor_model(self):
         # Based on vl53l1x sensor readings, create weight for each pose.
@@ -90,15 +115,15 @@ class Simulation:
         distance_sensor_left[:, 0] = self.poses[:, 0] + np.cos(poses_left_90) * robot.distance_sensor_from_middle
         distance_sensor_left[:, 1] = self.poses[:, 1] + np.sin(poses_left_90) * robot.distance_sensor_from_middle
         # now project forward by distance sensor range
-        distance_sensor_left[:, 0] += np.cos(self.poses[:, 2]) * self.left_distance
-        distance_sensor_left[:, 1] += np.sin(self.poses[:, 2]) * self.left_distance
+        distance_sensor_left[:, 0] += np.cos(self.poses[:, 2]) * self.distance_sensors.left
+        distance_sensor_left[:, 1] += np.sin(self.poses[:, 2]) * self.distance_sensors.left
         # right sensor
         poses_right_90 = np.radians(self.poses[:, 2] - 90)
         distance_sensor_right[:, 0] = self.poses[:, 0] + np.cos(poses_right_90) * robot.distance_sensor_from_middle
         distance_sensor_right[:, 1] = self.poses[:, 1] + np.sin(poses_right_90) * robot.distance_sensor_from_middle
         # now project forward by distance sensor range
-        distance_sensor_right[:, 0] += np.cos(self.poses[:, 2]) * self.left_distance
-        distance_sensor_right[:, 1] += np.sin(self.poses[:, 2]) * self.left_distance
+        distance_sensor_right[:, 0] += np.cos(self.poses[:, 2]) * self.distance_sensors.right
+        distance_sensor_right[:, 1] += np.sin(self.poses[:, 2]) * self.distance_sensors.right
 
         await asyncio.sleep(0)
         # weighted poses a numpy array of weights for each pose
@@ -134,15 +159,14 @@ class Simulation:
         return np.array([self.poses[n] for n in samples])
 
     def convert_odometry_to_motion(self, left_encoder_delta, right_encoder_delta):
-        # convert odometry to motion
-        # left_encoder is the change in the left encoder
-        # right_encoder is the change in the right encoder
-        # returns rot1, trans, rot2 
-        # rot1 is the rotation of the robot in radians before the translation
-        # trans is the distance the robot has moved in mm
-        # rot2 is the rotation of the robot in radians  
-
-        # convert encoder counts to mm
+        """
+        left_encoder is the change in the left encoder
+        right_encoder is the change in the right encoder
+        returns rot1, trans, rot2 
+        rot1 is the rotation of the robot in degrees before the translation
+        trans is the distance the robot has moved in mm
+        rot2 is the rotation of the robot in degrees
+        """
         left_mm = left_encoder_delta * robot.ticks_to_mm
         right_mm = right_encoder_delta * robot.ticks_to_mm
 
@@ -150,13 +174,13 @@ class Simulation:
             # no rotation
             return 0, left_mm, 0
 
-        # calculate the ICC
+        # calculate the radius of the arc
         radius = (robot.wheelbase_mm / 2) * (left_mm + right_mm) / (right_mm - left_mm)
-        ## arc length/radius = angle
-        theta = (right_mm - left_mm) / robot.wheelbase_mm
+        ## angle = difference in steps / wheelbase
+        d_theta = (right_mm - left_mm) / robot.wheelbase_mm
         # For a small enough motion, assume that the chord length = arc length
-        arc_length = theta * radius
-        rot1 = np.degrees(theta/2)
+        arc_length = d_theta * radius
+        rot1 = np.degrees(d_theta/2)
         rot2 = rot1
         return rot1, arc_length, rot2
 
@@ -166,10 +190,9 @@ class Simulation:
         new_encoder_left = robot.left_encoder.read()
         new_encoder_right = robot.right_encoder.read()
 
-        await asyncio.sleep(0)
         rot1, trans, rot2 = self.convert_odometry_to_motion(
             new_encoder_left - self.last_encoder_left, 
-            new_encoder_right - self.last_encoder_right)            
+            new_encoder_right - self.last_encoder_right)
         self.last_encoder_left = new_encoder_left
         self.last_encoder_right = new_encoder_right
         try:
@@ -186,67 +209,32 @@ class Simulation:
             rot2 = rot2 * self.encoder_mix + heading_change * self.imu_mix
         else:
             print("Failed to get heading")
-        await asyncio.sleep(0)            
-        rot1_model = np.array([get_triangular_sample(rot1, self.rotation_standard_dev) for _ in range(self.poses.shape[0])])
-        trans_model = np.array([get_triangular_sample(trans, self.speed_standard_dev) for _ in range(self.poses.shape[0])])
-        rot2_model = np.array([get_triangular_sample(rot2, self.rotation_standard_dev) for _ in range(self.poses.shape[0])])
+        await asyncio.sleep(0)
+        rot1_model = np.array([get_scaled_sample_around_mean(rot1, self.rotation_scale) for _ in range(self.poses.shape[0])])
+        trans_model = np.array([get_scaled_sample_around_mean(trans, self.speed_scale) for _ in range(self.poses.shape[0])])
+        rot2_model = np.array([get_scaled_sample_around_mean(rot2, self.rotation_scale) for _ in range(self.poses.shape[0])])
         self.poses[:,2] += rot1_model
         rot1_radians = np.radians(self.poses[:,2])
         self.poses[:,0] += trans_model * np.cos(rot1_radians)
         self.poses[:,1] += trans_model * np.sin(rot1_radians)
         self.poses[:,2] += rot2_model
-        self.poses[:,2] = np.vectorize(lambda n: float(n % 360))(self.poses[:,2])
-        self.poses = np.array(self.poses, dtype=np.int16)
+        self.poses[:,2] = np.array([float(theta % 360) for theta in self.poses[:,2]])
 
-    async def distance_sensor_updater(self):
-        robot.left_distance.distance_mode = 2
-        robot.right_distance.distance_mode = 2
-        robot.left_distance.timing_budget = 50
-        robot.right_distance.timing_budget = 50
-        robot.left_distance.start_ranging()
-        robot.right_distance.start_ranging()
-        while True:
-            if robot.left_distance.data_ready and robot.left_distance.distance:
-                self.left_distance = robot.left_distance.distance * 10  # convert to mm
-                robot.left_distance.clear_interrupt()
-            if robot.right_distance.data_ready and robot.right_distance.distance:
-                self.right_distance = robot.right_distance.distance * 10
-                robot.right_distance.clear_interrupt()
-            self.collision_avoider.update(self.left_distance, self.right_distance)
-            await asyncio.sleep(0.01)
-
-    async def run(self):
-        asyncio.create_task(self.distance_sensor_updater())
-        asyncio.create_task(self.collision_avoider.run())
+    async def main(self):
+        asyncio.create_task(self.distance_sensors.main())
+        asyncio.create_task(self.collision_avoider.main())
         self.last_heading = robot.imu.euler[0]
-        self.last_encoder_left = robot.left_encoder.read()
-        self.last_encoder_right = robot.right_encoder.read()
-
         try:
             while True:
                 weights = await self.apply_sensor_model()
                 send_poses(self.resample(weights, 20))
                 self.poses = self.resample(weights, self.population_size)
+                await asyncio.sleep(0)
                 await self.motion_model()
         finally:
             robot.stop()
 
 
-def read_command():
-    data = robot.uart.readline()
-    try:
-        decoded = data.decode()
-    except UnicodeError:
-        print("UnicodeError decoding :")
-        print(data)
-        return None
-    try:
-        request = json.loads(decoded)
-    except ValueError:
-        print("ValueError reading json from:")
-        print(decoded)
-        return None
-    return request
 
 
 async def updater(simulation):
@@ -274,21 +262,20 @@ async def command_handler(simulation):
     while True:
         if robot.uart.in_waiting:
             print("Receiving data...")
-            request = read_command()
+            request = read_json()
             if not request:
                 print("no request")
                 continue
+            print("Received: ", request)
             if request["command"] == "arena":
-                send_json(
-                    {
-                        "arena": arena.boundary_lines
-                    }
-                )
+                send_json({
+                    "arena": arena.boundary_lines,
+                })
                 if not update_task:
                     update_task = asyncio.create_task(updater(simulation))
             elif request["command"] == "start":
                 if not simulation_task:
-                    simulation_task = asyncio.create_task(simulation.run())
+                    simulation_task = asyncio.create_task(simulation.main())
 
         await asyncio.sleep(0.1)
 

@@ -1,4 +1,4 @@
-"""Represent the lines and target zone of the arena"""
+"""Represent the lines of the arena"""
 try:
   from ulab import numpy as np
 except ImportError:
@@ -16,8 +16,7 @@ boundary_lines = [
 width = 1500
 height = 1500
 
-# need to state clearly the orientation of the heading
-# if coordinates 0, 0 is bottom left, then heading 0 is right, with heading increasing anticlockwise.
+# 0, 0 is bottom left. Heading 0 is right, with heading increasing anticlockwise. Standard position angles.
 
 def point_is_inside_arena(x, y):
   """Return True if the point is inside the arena.
@@ -67,11 +66,12 @@ def make_distance_grid():
   """Take the boundary lines. With and overscan of 10 cells, and grid cell size of 5cm (50mm),
   make a grid of the distance to the nearest boundary line.
   """
-  grid = np.zeros((width // grid_cell_size + 2 * overscan, height // grid_cell_size + 2 * overscan), dtype=np.float)
+  grid = np.zeros((width // grid_cell_size + 2 * overscan, height // grid_cell_size + 2 * overscan), dtype=np.uint8)
+  # 4kb as floats, 1 kb as uint8s.
   for x in range(grid.shape[0]):
     column_x = x * grid_cell_size - (overscan * grid_cell_size)
     for y in range(grid.shape[1]):
-      value = get_point_decay_from_nearest_segment(boundary_lines, column_x, y * grid_cell_size - (overscan * grid_cell_size))
+      value = int(get_point_decay_from_nearest_segment(boundary_lines, column_x, y * grid_cell_size - (overscan * grid_cell_size)) * 255)
       grid[x, y] = value
   return grid
 
