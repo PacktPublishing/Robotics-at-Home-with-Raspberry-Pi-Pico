@@ -17,7 +17,6 @@ ticks_to_mm = wheel_circumference_mm / ticks_per_revolution
 ticks_to_m = ticks_to_mm / 1000
 m_to_ticks = 1 / ticks_to_m
 wheelbase_mm = 170
-distance_sensor_from_middle = 40 # approx mm
 
 motor_A2 = pwmio.PWMOut(board.GP17, frequency=100)
 motor_A1 = pwmio.PWMOut(board.GP16, frequency=100)

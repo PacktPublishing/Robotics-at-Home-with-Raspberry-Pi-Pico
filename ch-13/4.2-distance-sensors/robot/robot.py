@@ -8,14 +8,17 @@ import adafruit_bno055
 
 uart = busio.UART(board.GP12, board.GP13, baudrate=9600)
 
-wheel_diameter_mm = 70
+wheel_diameter_mm = 69.5
 wheel_circumference_mm = math.pi * wheel_diameter_mm
 gear_ratio = 298
 encoder_poles = 28
 ticks_per_revolution = encoder_poles * gear_ratio
-ticks_to_m = (wheel_circumference_mm / ticks_per_revolution) / 1000
+ticks_to_mm = wheel_circumference_mm / ticks_per_revolution
+ticks_to_m = ticks_to_mm / 1000
 m_to_ticks = 1 / ticks_to_m
-
+wheelbase_mm = 170
+distance_sensor_side_mm = 37 # approx mm
+distance_sensor_forward_mm = 66 # approx mm
 
 motor_A2 = pwmio.PWMOut(board.GP17, frequency=100)
 motor_A1 = pwmio.PWMOut(board.GP16, frequency=100)
@@ -34,10 +37,7 @@ i2c1 = busio.I2C(sda=board.GP2, scl=board.GP3)
 left_distance = adafruit_vl53l1x.VL53L1X(i2c0)
 right_distance = adafruit_vl53l1x.VL53L1X(i2c1)
 
-distance_sensor_from_middle = 40 # approx mm
-
 imu = adafruit_bno055.BNO055_I2C(i2c0)
-imu.mode = adafruit_bno055.NDOF_MODE # should be in chapter 12!
 
 def stop():
     motor_A1.duty_cycle = 0
