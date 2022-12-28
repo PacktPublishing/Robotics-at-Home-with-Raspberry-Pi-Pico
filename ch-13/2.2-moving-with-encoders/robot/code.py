@@ -104,6 +104,14 @@ class Simulation:
         rot2 = rot1
         return rot1, arc_length, rot2
 
+    def apply_motion_to_poses(self, rot1, trans, rot2):
+        self.poses[:,2] += rot1
+        rot1_radians = np.radians(self.poses[:,2])
+        self.poses[:,0] += trans * np.cos(rot1_radians)
+        self.poses[:,1] += trans * np.sin(rot1_radians)
+        self.poses[:,2] += rot2
+        self.poses[:,2] = np.array([float(theta % 360) for theta in self.poses[:,2]])
+
     def motion_model(self):
         """Apply the motion model"""
         new_encoder_left = robot.left_encoder.read()
@@ -114,12 +122,8 @@ class Simulation:
             new_encoder_right - self.last_encoder_right)
         self.last_encoder_left = new_encoder_left
         self.last_encoder_right = new_encoder_right
-        self.poses[:,2] += rot1
-        rot1_radians = np.radians(self.poses[:,2])
-        self.poses[:,0] += trans * np.cos(rot1_radians)
-        self.poses[:,1] += trans * np.sin(rot1_radians)
-        self.poses[:,2] += rot2
-        self.poses[:,2] = np.array([float(theta % 360) for theta in self.poses[:,2]])
+
+        self.apply_motion_to_poses(rot1, trans, rot2)
         print(
             json.dumps(
                 [self.poses.tolist(), rot1, trans, rot2]
