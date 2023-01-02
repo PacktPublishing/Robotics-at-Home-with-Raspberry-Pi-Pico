@@ -32,7 +32,9 @@ async def command_handler():
         robot.stop()
       elif command.startswith("G"):
         await asyncio.sleep(5)
-        asyncio.create_task(stop_motors_after(float(command[1:])))
+        asyncio.create_task(
+          stop_motors_after(float(command[1:]))
+        )
         robot.set_left(Settings.speed)
         robot.set_right(Settings.speed)
       elif command.startswith("?"):
@@ -41,9 +43,5 @@ async def command_handler():
         await asyncio.sleep(3)
     await asyncio.sleep(0)
 
-try:
-  motor_task = asyncio.create_task(motor_speed_loop())
-  asyncio.run(command_handler())
-finally:
-  motor_task.cancel()
-  robot.stop()
+asyncio.create_task(motor_speed_loop())
+asyncio.run(command_handler())
