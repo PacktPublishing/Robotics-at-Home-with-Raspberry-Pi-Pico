@@ -1,11 +1,9 @@
 class PIDController:
-    def __init__(self, kp, ki, kd, d_filter_gain=0.1, imax=None, imin=None):
+    def __init__(self, kp, ki, kd, d_filter_gain=0.1):
         self.kp = kp
         self.ki = ki
         self.kd = kd
         self.d_filter_gain = d_filter_gain
-        self.imax = imax
-        self.imin = imin
         self.reset()
 
     def reset(self):
@@ -15,10 +13,6 @@ class PIDController:
 
     def calculate(self, error, dt):
         self.integral += error * dt
-        if self.imax is not None and self.integral > self.imax:
-            self.integral = self.imax
-        if self.imin is not None and self.integral < self.imin:
-            self.integral = self.imin
         # Add a low pass filter to the difference
         difference = (error - self.error_prev) * self.d_filter_gain
         self.error_prev += difference

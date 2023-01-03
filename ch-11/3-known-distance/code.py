@@ -51,7 +51,7 @@ class DistanceTracker:
       expected = time_proportion * self.total_distance_in_ticks + self.current_position
       left.update(dt, expected)
       right.update(dt, expected)
-      robot.uart.write(f"0, {expected:.2f},{left.actual:.2f}\n".encode())
+      robot.send_line(f"{expected:.2f},{left.actual:.2f},0")
 
 
 distance_tracker = DistanceTracker()
@@ -61,23 +61,24 @@ async def command_handler():
   while True:
     if robot.uart.in_waiting:
       command = robot.uart.readline().decode().strip()
-      # PID settings
       if command.startswith("M"):
         distance_tracker.speed = float(command[1:])
       elif command.startswith("T"):
         distance_tracker.time_interval = float(command[1:])
-      # Start/stop commands
-      elif command == "O":
+      elif command == "G":
         distance_tracker.set_distance(0)
-      elif command.startswith("O"):
+      elif command.startswith("G"):
         await asyncio.sleep(5)
         distance_tracker.set_distance(float(command[1:]))
-      # Print settings
       elif command.startswith("?"):
-        robot.uart.write(f"M{distance_tracker.speed:.1f}\n".encode())
-        robot.uart.write(f"T{distance_tracker.time_interval:.1f}\n".encode())
+        robot.send_line(f"M{distance_tracker.speed:.1f}")
+        robot.send_line(f"T{distance_tracker.time_interval:.1f}")
         await asyncio.sleep(3)
     await asyncio.sleep(0)
-
-asyncio.create_task(distance_tracker.loop())
-asyncio.run(command_handler())
+    
+try:
+  motors_task = asyncio.create_task(distance_tracker.loop())
+  asyncio.run(command_handler())
+finally:
+  motors_task.cancel()
+  robot.stop()

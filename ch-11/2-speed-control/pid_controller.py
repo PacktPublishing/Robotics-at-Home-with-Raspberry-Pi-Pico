@@ -13,7 +13,6 @@ class PIDController:
 
     def calculate(self, error, dt):
         self.integral += error * dt
-
         # Add a low pass filter to the difference
         difference = (error - self.error_prev) * self.d_filter_gain
         self.error_prev += difference
