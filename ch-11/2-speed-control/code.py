@@ -48,7 +48,7 @@ async def motor_speed_loop():
     last_time = current_time
     left.update(dt)
     right.update(dt)
-    robot.uart.write(f"0, {left.actual_speed:.2f},{Settings.speed * Settings.motors_enabled:.2f}\n".encode())
+    robot.send_line(f"{left.actual_speed:.2f},{Settings.speed * Settings.motors_enabled:.2f},0")
 
 
 async def stop_motors_after(seconds):
@@ -64,20 +64,25 @@ async def command_handler():
         Settings.speed = float(command[1:])
       elif command.startswith("T"):
         Settings.time_interval = float(command[1:])
-      elif command == "O":
+      elif command == "G":
         Settings.motors_enabled = False
-      elif command.startswith("O"):
+      elif command.startswith("G"):
         await asyncio.sleep(5)
-        asyncio.create_task(stop_motors_after(float(command[1:])))
+        asyncio.create_task(
+          stop_motors_after(float(command[1:]))
+        )
         Settings.motors_enabled = True
         left.reset()
         right.reset()
-      # Print settings
       elif command.startswith("?"):
-        robot.uart.write(f"M{Settings.speed:.1f}\n".encode())
-        robot.uart.write(f"T{Settings.time_interval:.1f}\n".encode())
+        robot.send_line(f"M{Settings.speed:.1f}")
+        robot.send_line(f"T{Settings.time_interval:.1f}")
         await asyncio.sleep(3)
     await asyncio.sleep(0)
 
-asyncio.create_task(motor_speed_loop())
-asyncio.run(command_handler())
+try:
+  motors_task = asyncio.create_task(motor_speed_loop())
+  asyncio.run(command_handler())
+finally:
+  motors_task.cancel()
+  robot.stop()
