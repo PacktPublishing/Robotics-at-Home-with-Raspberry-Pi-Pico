@@ -5,9 +5,8 @@ import time
 
 class IMUTurnController:
     def __init__(self):
-        self.pid = pid_controller.PIDController(0.01, 0.008, 0)
+        self.pid = pid_controller.PIDController(0.01, 0.010, 0)
         self.target = 0
-        self.error = 0
 
     def update(self, dt, angle):
         error = self.target - angle
@@ -15,7 +14,6 @@ class IMUTurnController:
             error -= 360
         elif error < -180:
             error += 360
-        self.error = error
         control_signal = self.pid.calculate(error, dt)
         robot.set_left(control_signal)
         robot.set_right(-control_signal)
@@ -48,13 +46,13 @@ async def control_loop():
     angle = robot.imu.euler[0]
 
     controller.update(dt, angle)
-    robot.uart.write(f"{controller.error}, 0\n".encode())
+    robot.send_line(f"{angle}, 0")
 
 
 async def main():
   while not robot.check_imu_status():
     await asyncio.sleep(0.1)
-  robot.uart.write("Ready to go!\n".encode())
+  robot.send_line("Ready to go!")
 
   await control_loop()
 
