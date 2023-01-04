@@ -71,7 +71,10 @@ def set_left(speed):
 def set_right(speed):
     set_speed(right_motor, speed)
 
+def send_line(message):
+    uart.write(f"{message}\n".encode())
+
 def check_imu_status():
   sys_status, gyro, accel, mag = imu.calibration_status
-  uart.write(f"Sys: {sys_status}, Gyro: {gyro}, Accel: {accel}, Mag: {mag}\n".encode())
+  send_line(f"Sys: {sys_status}, Gyro: {gyro}, Accel: {accel}, Mag: {mag}")
   return sys_status == 3

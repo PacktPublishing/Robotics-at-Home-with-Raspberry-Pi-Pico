@@ -65,3 +65,6 @@ def set_left(speed):
 
 def set_right(speed):
     set_speed(right_motor, speed)
+
+def send_line(message):
+    uart.write(f"{message}\n".encode())
