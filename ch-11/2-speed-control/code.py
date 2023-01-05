@@ -28,11 +28,11 @@ class SpeedController:
     self.last_ticks = current_ticks
     self.actual_speed = robot.ticks_to_m * speed_in_ticks
     # calculate the error
-    error = (Settings.speed * Settings.motors_enabled) - self.actual_speed
+    error = Settings.speed - self.actual_speed
     # calculate the control signal
     control_signal = self.pid.calculate(error, dt)
     self.pwm += control_signal
-    self.motor_fn(self.pwm)
+    self.motor_fn(self.pwm * Settings.motors_enabled)
 
 
 left = SpeedController(robot.left_encoder, robot.set_left)
