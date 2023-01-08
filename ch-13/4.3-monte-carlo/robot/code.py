@@ -166,27 +166,25 @@ class Simulation:
 
     def observe_distance_sensors(self, weights):
         # modify the current weights based on the distance sensors
-        distance_sensor_left = np.zeros(
-            (self.poses.shape[0], 2), dtype=np.float)
-        distance_sensor_right = np.zeros(
-            (self.poses.shape[0], 2), dtype=np.float)
+        left_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
+        right_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
         # left sensor
         poses_left_90 = np.radians(self.poses[:, 2] + 90)
-        distance_sensor_left[:, 0] = self.poses[:, 0] + np.cos(poses_left_90) * robot.distance_sensor_side_mm
-        distance_sensor_left[:, 1] = self.poses[:, 1] + np.sin(poses_left_90) * robot.distance_sensor_side_mm
-        distance_sensor_left[:, 0] += np.cos(self.poses[:, 2]) * (self.distance_sensors.left + robot.distance_sensor_forward_mm)
-        distance_sensor_left[:, 1] += np.sin(self.poses[:, 2]) * (self.distance_sensors.left + robot.distance_sensor_forward_mm)
+        left_sensor[:, 0] = self.poses[:, 0] + np.cos(poses_left_90) * robot.dist_side_mm
+        left_sensor[:, 1] = self.poses[:, 1] + np.sin(poses_left_90) * robot.dist_side_mm
+        left_sensor[:, 0] += np.cos(self.poses[:, 2]) * (self.distance_sensors.left + robot.dist_forward_mm)
+        left_sensor[:, 1] += np.sin(self.poses[:, 2]) * (self.distance_sensors.left + robot.dist_forward_mm)
 
         # right sensor
         poses_right_90 = np.radians(self.poses[:, 2] - 90)
-        distance_sensor_right[:, 0] = self.poses[:, 0] + np.cos(poses_right_90) * robot.distance_sensor_side_mm
-        distance_sensor_right[:, 1] = self.poses[:, 1] + np.sin(poses_right_90) * robot.distance_sensor_side_mm
-        distance_sensor_right[:, 0] += np.cos(self.poses[:, 2]) * (self.distance_sensors.right + robot.distance_sensor_forward_mm)
-        distance_sensor_right[:, 1] += np.sin(self.poses[:, 2]) * (self.distance_sensors.right + robot.distance_sensor_forward_mm)
+        right_sensor[:, 0] = self.poses[:, 0] + np.cos(poses_right_90) * robot.dist_side_mm
+        right_sensor[:, 1] = self.poses[:, 1] + np.sin(poses_right_90) * robot.dist_side_mm
+        right_sensor[:, 0] += np.cos(self.poses[:, 2]) * (self.distance_sensors.right + robot.dist_forward_mm)
+        right_sensor[:, 1] += np.sin(self.poses[:, 2]) * (self.distance_sensors.right + robot.dist_forward_mm)
         # Look up the distance in the arena
         for index in range(self.poses.shape[0]):
-            sensor_weight = arena.get_distance_grid_at_point(distance_sensor_left[index,0], distance_sensor_left[index,1])
-            sensor_weight += arena.get_distance_grid_at_point(distance_sensor_right[index,0], distance_sensor_right[index,1])
+            sensor_weight = arena.get_distance_grid_at_point(left_sensor[index,0], left_sensor[index,1])
+            sensor_weight += arena.get_distance_grid_at_point(right_sensor[index,0], right_sensor[index,1])
             weights[index] *= sensor_weight
         return weights
 

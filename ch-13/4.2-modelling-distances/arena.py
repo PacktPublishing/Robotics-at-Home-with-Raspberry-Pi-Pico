@@ -16,6 +16,19 @@ boundary_lines = [
 width = 1500
 height = 1500
 
+def contains(x, y):
+  """Return True if the point is inside the arena.
+  if the point is inside the rectangle, but not inside the cutout, it's inside the arena.
+  """  
+  # is it inside the rectangle?
+  if x < 0 or x > width \
+    or y < 0 or y > height:
+    return False
+  # is it inside the cutout?
+  if x > 1000 and y < 500:
+    return False
+  return True
+
 
 grid_cell_size = 50
 overscan = 10 # 10 each way
@@ -52,9 +65,6 @@ def get_distance_likelihood(x, y):
             min_distance = distance
     return 1.0 / (1 + min_distance/250) ** 2
 
-
-grid_cell_size = 50
-overscan = 10 # 10 each way
 
 # beam endpoint model
 def make_distance_grid():

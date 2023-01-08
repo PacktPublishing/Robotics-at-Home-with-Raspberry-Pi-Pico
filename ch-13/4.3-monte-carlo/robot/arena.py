@@ -29,6 +29,7 @@ def contains(x, y):
     return False
   return True
 
+
 grid_cell_size = 50
 overscan = 10 # 10 each way
 
@@ -64,9 +65,6 @@ def get_distance_likelihood(x, y):
             min_distance = distance
     return 1.0 / (1 + min_distance/250) ** 2
 
-
-grid_cell_size = 50
-overscan = 10 # 10 each way
 
 # beam endpoint model
 def make_distance_grid():
