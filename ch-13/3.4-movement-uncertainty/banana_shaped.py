@@ -41,6 +41,9 @@ ax.arrow(*motion_line[0], *motion_line[1], color="red", width=5)
 # plot the angles on top
 # line from original cluster middle, going east.
 ax.plot([250, 250+100], [300, 300], color="black")
+# label plot axes with mm
+ax.set_xlabel("mm")
+ax.set_ylabel("mm")
 
 angle = patches.Wedge((250, 300), 100, 0, motion_angle, width=20, color=(0.3, 0.3, 0.3, 0.3))
 ax.add_patch(angle)

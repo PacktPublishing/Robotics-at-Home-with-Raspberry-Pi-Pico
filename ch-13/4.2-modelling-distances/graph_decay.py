@@ -24,6 +24,8 @@ plt.plot((0, 0), [0, 1], color="black")
 
 # plot m line in dashed blue
 plt.plot((m, m), [0, 1], color="red", linestyle="--")
-
+# label axes
+plt.ylabel("Likelihood")
+plt.xlabel("Distance (mm)")
 
 plt.show()
