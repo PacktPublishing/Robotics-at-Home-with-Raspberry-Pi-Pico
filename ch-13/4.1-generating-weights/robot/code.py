@@ -10,8 +10,6 @@ class DistanceSensorTracker:
     def __init__(self):
         robot.left_distance.distance_mode = 2
         robot.right_distance.distance_mode = 2
-        robot.left_distance.timing_budget = 50
-        robot.right_distance.timing_budget = 50
         self.left = 300
         self.right = 300
 
