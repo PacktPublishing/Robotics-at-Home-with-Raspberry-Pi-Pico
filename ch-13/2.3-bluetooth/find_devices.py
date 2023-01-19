@@ -7,7 +7,11 @@ async def run():
     devices = await bleak.BleakScanner.discover(service_uuids=[ble_uuid])
     print(f"Found {len(devices)} devices")
     print([device.name for device in devices])
-    ble_device_info = [device for device in devices if device.name==ble_name][0]
+    matching_devices = [device for device in devices if device.name==ble_name]
+    if len(matching_devices) == 0):
+        print(f"Could not find robot at {ble_name}")
+        return
+    ble_device_info = matching_devices[0]
     print(f"Found robot {ble_device_info.name}...")
 
 asyncio.run(run())
