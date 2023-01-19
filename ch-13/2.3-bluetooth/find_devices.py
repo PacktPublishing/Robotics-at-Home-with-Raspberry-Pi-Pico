@@ -9,8 +9,7 @@ async def run():
     print([device.name for device in devices])
     matching_devices = [device for device in devices if device.name==ble_name]
     if len(matching_devices) == 0:
-        print(f"Could not find robot at {ble_name}")
-        return
+        raise RuntimeError("Could not find robot")
     ble_device_info = matching_devices[0]
     print(f"Found robot {ble_device_info.name}...")
 

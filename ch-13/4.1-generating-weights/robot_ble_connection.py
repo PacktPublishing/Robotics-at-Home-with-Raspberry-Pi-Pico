@@ -19,10 +19,13 @@ class BleConnection:
 
     async def connect(self):
         print("Scanning for devices...")
-        devices = await bleak.BleakScanner.discover(service_uuids=[self.ble_uuid])
-        print(f"Found {len(devices)} devices")
-        print([device.name for device in devices])        
-        ble_device_info = [device for device in devices if device.name==self.ble_name][0]
+        devices = await bleak.BleakScanner.discover(
+            service_uuids=[self.ble_uuid]
+        )
+        matching_devices = [device for device in devices if device.name==self.ble_name]
+        if len(matching_devices) == 0:
+            raise RuntimeError("Could not find robot")
+        ble_device_info = matching_devices[0]
         print(f"Connecting to {ble_device_info.name}...")
         self.ble_client = bleak.BleakClient(ble_device_info.address)
         await self.ble_client.connect()
