@@ -11,7 +11,7 @@ class RobotDisplay:
         self.buffer = ""
         self.arena = {}
         self.closed = False
-        self.fig, self.ax = plt.subplots()
+        self.fig, self.axes = plt.subplots()
 
     def handle_close(self, _):
         self.closed = True
@@ -30,10 +30,10 @@ class RobotDisplay:
                 self.arena = message
 
     def draw(self):
-        self.ax.clear()
+        self.axes.clear()
         if self.arena:
             for line in self.arena["arena"]:
-                self.ax.plot(
+                self.axes.plot(
                     [line[0][0], line[1][0]], [line[0][1], line[1][1]], color="black"
                 )
 

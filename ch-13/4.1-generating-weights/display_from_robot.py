@@ -13,7 +13,7 @@ class RobotDisplay:
         self.buffer = ""
         self.arena = {}
         self.closed = False
-        self.fig, self.ax = plt.subplots()
+        self.fig, self.axes = plt.subplots()
         self.poses = None
 
     def handle_close(self, _):
@@ -35,14 +35,14 @@ class RobotDisplay:
                 self.poses = np.array(message["poses"], dtype=np.int16)
 
     def draw(self):
-        self.ax.clear()
+        self.axes.clear()
         if self.arena:
             for line in self.arena["arena"]:
-                self.ax.plot(
+                self.axes.plot(
                     [line[0][0], line[1][0]], [line[0][1], line[1][1]], color="black"
                 )
         if self.poses is not None:
-            self.ax.scatter(self.poses[:,0], self.poses[:,1], color="blue")
+            self.axes.scatter(self.poses[:,0], self.poses[:,1], color="blue")
 
     async def send_command(self, command):
         request = (json.dumps({"command": command})  ).encode()
