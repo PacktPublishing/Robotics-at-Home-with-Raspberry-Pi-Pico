@@ -19,7 +19,7 @@ class RobotDisplay:
         self.closed = True
 
     def handle_data(self, data):
-        self.buffer += data.decode("utf-8")
+        self.buffer += data.decode()
         while "\n" in self.buffer:
             line, self.buffer = self.buffer.split("\n", 1)
             print(f"Received data: {line}")
