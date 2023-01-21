@@ -4,17 +4,19 @@ try:
 except ImportError:
   import numpy as np
 
-boundary_lines = [
-    [(0,0), (0, 1500)],
-    [(0, 1500), (1500, 1500)],
-    [(1500, 1500), (1500, 500)],
-    [(1500, 500), (1000, 500)],
-    [(1000, 500), (1000, 0)],
-    [(1000, 0), (0, 0)],
-]
-
 width = 1500
 height = 1500
+cutout_width = 500
+cutout_height = 500
+
+boundary_lines = [
+    [(0,0), (0, height)],
+    [(0, height), (width, height)],
+    [(width, height), (width, cutout_height)],
+    [(width, cutout_height), (width - cutout_width, cutout_height)],
+    [(width - cutout_width, cutout_height), (width - cutout_width, 0)],
+    [(width - cutout_width, 0), (0, 0)],
+]
 
 def contains(x, y):
   """Return True if the point is inside the arena.
@@ -25,7 +27,7 @@ def contains(x, y):
     or y < 0 or y > height:
     return False
   # is it inside the cutout?
-  if x > 1000 and y < 500:
+  if x > (width - cutout_width) and y < cutout_height:
     return False
   return True
 
@@ -74,7 +76,7 @@ def make_distance_grid():
     grid = np.zeros((
             width // grid_cell_size + 2 * overscan, 
             height // grid_cell_size + 2 * overscan
-        ), dtype=float)
+        ), dtype=np.float)
     for x in range(grid.shape[0]):
         column_x = x * grid_cell_size - (overscan * grid_cell_size)
         for y in range(grid.shape[1]):
