@@ -41,7 +41,7 @@ class CollisionAvoid:
             robot.set_left(self.speed)
             await asyncio.sleep(0)
 
-def get_scaled_sample_around_mean(mean, scale):
+def get_random_sample(mean, scale):
     return mean + (random.uniform(-scale, scale) + random.uniform(-scale, scale)) / 2
 
 def send_json(data):
@@ -137,9 +137,9 @@ class Simulation:
         rot1_scale = self.alpha_rot * abs(rot1) + self.alpha_rot_trans * abs(trans)
         trans_scale = self.alpha_trans * abs(trans) + self.alpha_trans_rot * (abs(rot1) + abs(rot2))
         rot2_scale = self.alpha_rot * abs(rot2) + self.alpha_rot_trans * abs(trans)
-        rot1_model = np.array([get_scaled_sample_around_mean(rot1, rot1_scale) for _ in range(self.poses.shape[0])])
-        trans_model = np.array([get_scaled_sample_around_mean(trans, trans_scale) for _ in range(self.poses.shape[0])])
-        rot2_model = np.array([get_scaled_sample_around_mean(rot2, rot2_scale) for _ in range(self.poses.shape[0])])
+        rot1_model = np.array([get_random_sample(rot1, rot1_scale) for _ in range(self.poses.shape[0])])
+        trans_model = np.array([get_random_sample(trans, trans_scale) for _ in range(self.poses.shape[0])])
+        rot2_model = np.array([get_random_sample(rot2, rot2_scale) for _ in range(self.poses.shape[0])])
         return rot1_model, trans_model, rot2_model
 
     def motion_model(self):

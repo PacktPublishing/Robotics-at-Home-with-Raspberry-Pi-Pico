@@ -18,14 +18,14 @@ motion_line = np.array([[250, 300],
   [motion_scale * np.cos(np.radians(motion_angle)), motion_scale * np.sin(np.radians(motion_angle))]])
 
 
-def get_scaled_sample_around_mean(mean, scale):
+def get_random_sample(mean, scale):
     return mean + (random.uniform(-scale, scale) + random.uniform(-scale, scale)) / 2
 
 rotation_scale = 0.05 * abs(motion_angle) + 0.01 * abs(motion_scale)
 translation_scale = 0.05 * abs(motion_scale) + 0.01 * abs(motion_angle)
 
-motion_rotation = np.array([get_scaled_sample_around_mean(motion_angle, rotation_scale) for _ in range(poses.shape[0])])
-motion_translation = np.array([get_scaled_sample_around_mean(motion_scale, translation_scale) for _ in range(poses.shape[0])])
+motion_rotation = np.array([get_random_sample(motion_angle, rotation_scale) for _ in range(poses.shape[0])])
+motion_translation = np.array([get_random_sample(motion_scale, translation_scale) for _ in range(poses.shape[0])])
 
 new_poses = np.zeros_like(poses)
 new_poses[:, 0] = poses[:, 0] + motion_translation * np.cos(np.radians(motion_rotation))
