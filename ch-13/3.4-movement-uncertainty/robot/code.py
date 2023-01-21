@@ -107,7 +107,7 @@ class Simulation:
         rot2 = rot1
         return rot1, arc_length, rot2
 
-    def apply_motion_to_poses(self, rot1, trans, rot2):
+    def move_poses(self, rot1, trans, rot2):
         self.poses[:,2] += rot1
         rot1_radians = np.radians(self.poses[:,2])
         self.poses[:,0] += trans * np.cos(rot1_radians)
@@ -136,7 +136,7 @@ class Simulation:
         self.last_encoder_right = new_encoder_right
 
         rot1_model, trans_model, rot2_model = self.randomise_motion(rot1, trans, rot2)
-        self.apply_motion_to_poses(rot1_model, trans_model, rot2_model)
+        self.move_poses(rot1_model, trans_model, rot2_model)
 
         print(
             json.dumps(
