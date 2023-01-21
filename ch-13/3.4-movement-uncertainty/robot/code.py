@@ -115,7 +115,7 @@ class Simulation:
         self.poses[:,2] += rot2
         self.poses[:,2] = np.array([float(theta % 360) for theta in self.poses[:,2]])
 
-    def apply_randomness_to_motion(self, rot1, trans, rot2):
+    def randomise_motion(self, rot1, trans, rot2):
         rot1_scale = self.alpha_rot * abs(rot1) + self.alpha_rot_trans * abs(trans)
         trans_scale = self.alpha_trans * abs(trans) + self.alpha_trans_rot * (abs(rot1) + abs(rot2))
         rot2_scale = self.alpha_rot * abs(rot2) + self.alpha_rot_trans * abs(trans)
@@ -135,7 +135,7 @@ class Simulation:
         self.last_encoder_left = new_encoder_left
         self.last_encoder_right = new_encoder_right
 
-        rot1_model, trans_model, rot2_model = self.apply_randomness_to_motion(rot1, trans, rot2)
+        rot1_model, trans_model, rot2_model = self.randomise_motion(rot1, trans, rot2)
         self.apply_motion_to_poses(rot1_model, trans_model, rot2_model)
 
         print(
