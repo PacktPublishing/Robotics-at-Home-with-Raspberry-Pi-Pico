@@ -45,7 +45,7 @@ class CollisionAvoid:
                 robot.set_left(self.speed)
                 await asyncio.sleep(0)
         except Exception as e:
-            send_json({"exception": traceback.format_exception(e)})
+            send_json({"exception": traceback.format_exception(e, e, e.__traceback__)})
             raise
             
 def get_random_sample(mean, scale):
@@ -259,7 +259,7 @@ class Simulation:
                 self.motion_model()
                 self.print_pc_lines()
         except Exception as e:
-            send_json({"exception": traceback.format_exception(e)})
+            send_json({"exception": traceback.format_exception(e, e, e.__traceback__)})
             raise
         finally:
             collision_avoider.cancel()
