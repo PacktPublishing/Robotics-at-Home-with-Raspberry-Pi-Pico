@@ -16,6 +16,8 @@ class PerformanceCounter:
         self.count += 1
 
     def per_call(self):
+        if self.count == 0:
+            return 0
         return self.total_time / self.count
     
     def total_call_time(self):

@@ -79,16 +79,16 @@ class Simulation:
                 int(random.uniform(0, arena.width)),
                 int(random.uniform(0, arena.height)),
                 int(random.uniform(0, 360))) for _ in range(self.population_size)],
-            dtype=np.float,
+            dtype=np.int16,
         )
         self.distance_sensors = DistanceSensorTracker()
         self.collision_avoider = CollisionAvoid(self.distance_sensors)
         self.last_encoder_left = robot.left_encoder.read()
         self.last_encoder_right = robot.right_encoder.read()
-        self.alpha_rot = 0.05
-        self.alpha_rot_trans = 0.01
-        self.alpha_trans = 0.05
-        self.alpha_trans_rot = 0.01
+        self.alpha_rot = 0.09
+        self.alpha_rot_trans = 0.05
+        self.alpha_trans = 0.12
+        self.alpha_trans_rot = 0.05
         
         # profiling
         self.pc_resample = PerformanceCounter()
@@ -98,26 +98,6 @@ class Simulation:
         self.pc_motion_model = PerformanceCounter()
         self.pc_observe_distance_sensors = PerformanceCounter()
         self.pc_observation_model = PerformanceCounter()
-
-    def resample(self, weights, sample_count):
-        """Return sample_count number of samples from the
-        poses, based on the weights array.
-        Uses low variance resampling"""
-        self.pc_resample.start()
-        samples = np.zeros((sample_count, 3))
-        interval = 1 / sample_count
-        shift = random.uniform(0, interval)
-        cumulative_weights = weights[0]
-        source_index = 0
-        for current_index in range(sample_count):
-            weight_index = shift + current_index * interval
-            while weight_index >= cumulative_weights:
-                source_index += 1
-                source_index = min(len(weights), source_index)
-                cumulative_weights += weights[source_index]
-            samples[current_index] = self.poses[source_index]
-        self.pc_resample.stop()
-        return samples
 
     def convert_odometry_to_motion(self, left_encoder_delta, right_encoder_delta):
         """
@@ -203,12 +183,14 @@ class Simulation:
         right_hypotenuse = np.sqrt(opposite**2 + adjacent**2)
 
         # modify the current weights based on the distance sensors
-        left_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
+        # left_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
         right_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
         # left sensor
         poses_left_angle = np.radians(self.poses[:, 2]) + left_angle
-        left_sensor[:, 0] = self.poses[:, 0] + np.cos(poses_left_angle) * left_hypotenuse
-        left_sensor[:, 1] = self.poses[:, 1] + np.sin(poses_left_angle) * left_hypotenuse
+        left_sensor = np.concatenate([
+            self.poses[:, 0] + np.cos(poses_left_angle) * left_hypotenuse,
+            self.poses[:, 1] + np.sin(poses_left_angle) * left_hypotenuse
+        ], axis=1)
 
         # right sensor
         poses_right_angle = np.radians(self.poses[:, 2]) - right_angle
@@ -217,8 +199,8 @@ class Simulation:
 
         # Look up the distance in the arena
         for index in range(self.poses.shape[0]):
-            sensor_weight = arena.get_distance_grid_at_point(left_sensor[index,0], left_sensor[index,1])
-            sensor_weight += arena.get_distance_grid_at_point(right_sensor[index,0], right_sensor[index,1])
+            sensor_weight = arena.get_distance_likelihood_at(left_sensor[index,0], left_sensor[index,1])
+            sensor_weight += arena.get_distance_likelihood_at(right_sensor[index,0], right_sensor[index,1])
             weights[index] *= sensor_weight
         self.pc_observe_distance_sensors.stop()
         return weights
@@ -228,11 +210,37 @@ class Simulation:
         weights = np.ones(self.poses.shape[0], dtype=np.float)
         for index, pose in enumerate(self.poses):
             if not arena.contains(pose[:1], pose[:2]):
-                weights[index] = 0.01
+                weights[index] = arena.low_probability
         weights = self.observe_distance_sensors(weights)
-        weights = weights / np.sum(weights)
         self.pc_observation_model.stop()
         return weights
+
+    def resample(self, weights, sample_count):
+        """Return sample_count number of samples from the
+        poses, based on the weights array.
+        Uses low variance resampling"""
+        self.pc_resample.start()
+        samples = np.zeros((sample_count, 3))
+        interval = np.sum(weights) / sample_count
+        shift = random.uniform(0, interval)
+        cumulative_weights = weights[0]
+        source_index = 0
+        try:
+            for current_index in range(sample_count):
+                weight_index = shift + current_index * interval
+                while weight_index >= cumulative_weights:
+                    source_index += 1
+                    source_index = min(len(weights), source_index)
+                    cumulative_weights += weights[source_index]
+                samples[current_index] = self.poses[source_index]
+        except IndexError:
+            send_json({"error": "IndexError in resample.", "weights": [weights.tolist()]})
+            raise
+        if samples.shape[0] != sample_count:
+            send_json({"error": "Sample count mismatch in resample.", "samples": [samples.tolist()]})
+            raise Exception("Sample count mismatch in resample.")
+        self.pc_resample.stop()
+        return samples
 
     def print_pc_lines(self):
         if self.pc_odometry.count % 10 != 0:

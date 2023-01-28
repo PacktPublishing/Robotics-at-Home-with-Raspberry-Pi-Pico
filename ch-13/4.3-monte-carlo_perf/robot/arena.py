@@ -9,6 +9,8 @@ height = 1500
 cutout_width = 500
 cutout_height = 500
 
+low_probability = 10 ** -10
+
 boundary_lines = [
     [(0,0), (0, height)],
     [(0, height), (width, height)],
@@ -65,7 +67,7 @@ def get_distance_likelihood(x, y):
         distance = get_distance_to_segment(x, y, segment)
         if min_distance is None or distance < min_distance:
             min_distance = distance
-    return 1.0 / (1 + min_distance/250) ** 2
+    return 1.0 / (1 + min_distance/100) ** 2
 
 
 # beam endpoint model
@@ -88,10 +90,10 @@ def make_distance_grid():
 
 distance_grid = make_distance_grid()
 
-def get_distance_grid_at_point(x, y):
+def get_distance_likelihood_at(x, y):
   """Return the distance grid value at the given point."""
   grid_x = int(x // grid_cell_size + overscan)
   grid_y = int(y // grid_cell_size + overscan)
   if grid_x < 0 or grid_x >= distance_grid.shape[0] or grid_y < 0 or grid_y >= distance_grid.shape[1]:
-    return 0
+    return low_probability
   return distance_grid[grid_x, grid_y]
