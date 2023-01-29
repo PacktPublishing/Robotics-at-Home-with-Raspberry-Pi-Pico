@@ -77,28 +77,10 @@ class Simulation:
         self.collision_avoider = CollisionAvoid(self.distance_sensors)
         self.last_encoder_left = robot.left_encoder.read()
         self.last_encoder_right = robot.right_encoder.read()
-        self.alpha_rot = 0.05
-        self.alpha_rot_trans = 0.01
-        self.alpha_trans = 0.05
-        self.alpha_trans_rot = 0.01
-
-
-    def resample(self, weights, sample_count):
-        """Return sample_count number of samples from the
-        poses, based on the weights array.
-        Uses low variance resampling"""
-        samples = np.zeros((sample_count, 3))
-        interval = 1 / sample_count
-        shift = random.uniform(0, interval)
-        cumulative_weights = weights[0]
-        source_index = 0
-        for current_index in range(sample_count):
-            weight_index = shift + current_index * interval
-            while weight_index > cumulative_weights:
-                source_index += 1
-                cumulative_weights += weights[source_index]
-            samples[current_index] = self.poses[source_index]
-        return samples
+        self.alpha_rot = 0.09
+        self.alpha_rot_trans = 0.05
+        self.alpha_trans = 0.12
+        self.alpha_trans_rot = 0.05
 
     def convert_odometry_to_motion(self, left_encoder_delta, right_encoder_delta):
         """
@@ -163,39 +145,62 @@ class Simulation:
         )
 
     def observe_distance_sensors(self, weights):
+        # Sensor triangle left
+        opposite = self.distance_sensors.left + robot.dist_forward_mm
+        adjacent = robot.dist_side_mm
+        left_angle = np.atan(opposite / adjacent)
+        left_hypotenuse = np.sqrt(opposite**2 + adjacent**2)
+        # Sensor triangle right
+        opposite = self.distance_sensors.right + robot.dist_forward_mm
+        adjacent = robot.dist_side_mm
+        right_angle = np.atan(opposite / adjacent)
+        right_hypotenuse = np.sqrt(opposite**2 + adjacent**2)
+
         # modify the current weights based on the distance sensors
         left_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
         right_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
+        
         # left sensor
-        poses_left_90 = np.radians(self.poses[:, 2] + 90)
-        left_sensor[:, 0] = self.poses[:, 0] + np.cos(poses_left_90) * robot.dist_side_mm
-        left_sensor[:, 1] = self.poses[:, 1] + np.sin(poses_left_90) * robot.dist_side_mm
-        left_sensor[:, 0] += np.cos(self.poses[:, 2]) * (self.distance_sensors.left + robot.dist_forward_mm)
-        left_sensor[:, 1] += np.sin(self.poses[:, 2]) * (self.distance_sensors.left + robot.dist_forward_mm)
+        poses_left_angle = np.radians(self.poses[:, 2]) + left_angle
+        left_sensor[:, 0] = self.poses[:, 0] + np.cos(poses_left_angle) * left_hypotenuse
+        left_sensor[:, 1] = self.poses[:, 1] + np.sin(poses_left_angle) * left_hypotenuse
 
         # right sensor
-        poses_right_90 = np.radians(self.poses[:, 2] - 90)
-        right_sensor[:, 0] = self.poses[:, 0] + np.cos(poses_right_90) * robot.dist_side_mm
-        right_sensor[:, 1] = self.poses[:, 1] + np.sin(poses_right_90) * robot.dist_side_mm
-        right_sensor[:, 0] += np.cos(self.poses[:, 2]) * (self.distance_sensors.right + robot.dist_forward_mm)
-        right_sensor[:, 1] += np.sin(self.poses[:, 2]) * (self.distance_sensors.right + robot.dist_forward_mm)
+        poses_right_angle = np.radians(self.poses[:, 2]) - right_angle
+        right_sensor[:, 0] = self.poses[:, 0] + np.cos(poses_right_angle) * right_hypotenuse
+        right_sensor[:, 1] = self.poses[:, 1] + np.sin(poses_right_angle) * right_hypotenuse
+
         # Look up the distance in the arena
         for index in range(self.poses.shape[0]):
-            sensor_weight = arena.get_distance_grid_at_point(left_sensor[index,0], left_sensor[index,1])
-            sensor_weight += arena.get_distance_grid_at_point(right_sensor[index,0], right_sensor[index,1])
+            sensor_weight = arena.get_distance_likelihood_at(left_sensor[index,0], left_sensor[index,1])
+            sensor_weight += arena.get_distance_likelihood_at(right_sensor[index,0], right_sensor[index,1])
             weights[index] *= sensor_weight
         return weights
-
 
     def observation_model(self):
         weights = np.ones(self.poses.shape[0], dtype=np.float)
         for index, pose in enumerate(self.poses):
             if not arena.contains(pose[:1], pose[:2]):
-                weights[index] = 0.01
+                weights[index] = arena.low_probability
         weights = self.observe_distance_sensors(weights)
-        weights = weights / np.sum(weights)
         return weights
 
+    def resample(self, weights, sample_count):
+        """Return sample_count number of samples from the
+        poses, based on the weights array.
+        Uses low variance resampling"""
+        samples = np.zeros((sample_count, 3))
+        interval = np.sum(weights) / sample_count
+        shift = random.uniform(0, interval)
+        cumulative_weights = weights[0]
+        source_index = 0
+        for current_index in range(sample_count):
+            weight_index = shift + current_index * interval
+            while weight_index > cumulative_weights:
+                source_index += 1
+                cumulative_weights += weights[source_index]
+            samples[current_index] = self.poses[source_index]
+        return samples
     async def main(self):
         asyncio.create_task(self.distance_sensors.main())
         collision_avoider = asyncio.create_task(self.collision_avoider.main())

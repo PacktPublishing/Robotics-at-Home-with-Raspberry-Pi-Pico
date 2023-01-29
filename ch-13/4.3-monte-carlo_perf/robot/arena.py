@@ -35,7 +35,7 @@ def contains(x, y):
 
 
 grid_cell_size = 50
-overscan = 10 # 10 each way
+overscan = 2 # 2 each way
 
 
 def get_distance_to_segment(x, y, segment):

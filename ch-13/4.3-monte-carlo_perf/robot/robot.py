@@ -8,7 +8,7 @@ import adafruit_bno055
 
 uart = busio.UART(board.GP12, board.GP13, baudrate=9600, timeout=0.1)
 
-wheel_diameter_mm = 69.5
+wheel_diameter_mm = 70
 wheel_circumference_mm = math.pi * wheel_diameter_mm
 gear_ratio = 298
 encoder_poles = 28

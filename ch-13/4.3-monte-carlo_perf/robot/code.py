@@ -31,7 +31,7 @@ class DistanceSensorTracker:
 
 class CollisionAvoid:
     def __init__(self, distance_sensors):
-        self.speed = 0.6
+        self.speed = 0.5
         self.distance_sensors = distance_sensors
 
     async def main(self):
@@ -185,11 +185,11 @@ class Simulation:
         # modify the current weights based on the distance sensors
         left_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
         right_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
+        
         # left sensor
         poses_left_angle = np.radians(self.poses[:, 2]) + left_angle
         left_sensor[:, 0] = self.poses[:, 0] + np.cos(poses_left_angle) * left_hypotenuse
         left_sensor[:, 1] = self.poses[:, 1] + np.sin(poses_left_angle) * left_hypotenuse
-
 
         # right sensor
         poses_right_angle = np.radians(self.poses[:, 2]) - right_angle
@@ -229,14 +229,14 @@ class Simulation:
                 weight_index = shift + current_index * interval
                 while weight_index >= cumulative_weights:
                     source_index += 1
-                    source_index = min(len(weights), source_index)
+                    source_index = min(len(weights) - 1, source_index)
                     cumulative_weights += weights[source_index]
                 samples[current_index] = self.poses[source_index]
         except IndexError:
-            send_json({"error": "IndexError in resample.", "weights": [weights.tolist()]})
+            send_json({"error": "IndexError in resample.", "weights": weights.tolist()})
             raise
         if samples.shape[0] != sample_count:
-            send_json({"error": "Sample count mismatch in resample.", "samples": [samples.tolist()]})
+            send_json({"error": "Sample count mismatch in resample.", "samples": samples.tolist()})
             raise Exception("Sample count mismatch in resample.")
         self.pc_resample.stop()
         return samples

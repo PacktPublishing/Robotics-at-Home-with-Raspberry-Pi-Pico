@@ -6,7 +6,7 @@ import adafruit_vl53l1x
 import math
 import adafruit_bno055
 
-uart = busio.UART(board.GP12, board.GP13, baudrate=9600)
+uart = busio.UART(board.GP12, board.GP13, baudrate=9600, timeout=0.1)
 
 wheel_diameter_mm = 69.5
 wheel_circumference_mm = math.pi * wheel_diameter_mm
