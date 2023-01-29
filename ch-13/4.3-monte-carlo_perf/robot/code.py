@@ -183,14 +183,13 @@ class Simulation:
         right_hypotenuse = np.sqrt(opposite**2 + adjacent**2)
 
         # modify the current weights based on the distance sensors
-        # left_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
+        left_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
         right_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
         # left sensor
         poses_left_angle = np.radians(self.poses[:, 2]) + left_angle
-        left_sensor = np.concatenate([
-            self.poses[:, 0] + np.cos(poses_left_angle) * left_hypotenuse,
-            self.poses[:, 1] + np.sin(poses_left_angle) * left_hypotenuse
-        ], axis=1)
+        left_sensor[:, 0] = self.poses[:, 0] + np.cos(poses_left_angle) * left_hypotenuse
+        left_sensor[:, 1] = self.poses[:, 1] + np.sin(poses_left_angle) * left_hypotenuse
+
 
         # right sensor
         poses_right_angle = np.radians(self.poses[:, 2]) - right_angle
