@@ -172,13 +172,13 @@ class Simulation:
     def observe_distance_sensors(self, weights):
         self.pc_observe_distance_sensors.start()
         # Sensor triangle left
-        opposite = self.distance_sensors.left + robot.dist_forward_mm
-        adjacent = robot.dist_side_mm
+        adjacent = self.distance_sensors.left + robot.dist_forward_mm
+        opposite = robot.dist_side_mm
         left_angle = np.atan(opposite / adjacent)
         left_hypotenuse = np.sqrt(opposite**2 + adjacent**2)
         # Sensor triangle right
-        opposite = self.distance_sensors.right + robot.dist_forward_mm
-        adjacent = robot.dist_side_mm
+        adjacent = self.distance_sensors.right + robot.dist_forward_mm
+        opposite = robot.dist_side_mm
         right_angle = np.atan(opposite / adjacent)
         right_hypotenuse = np.sqrt(opposite**2 + adjacent**2)
 
@@ -201,6 +201,16 @@ class Simulation:
             sensor_weight = arena.get_distance_likelihood_at(left_sensor[index,0], left_sensor[index,1])
             sensor_weight += arena.get_distance_likelihood_at(right_sensor[index,0], right_sensor[index,1])
             weights[index] *= sensor_weight
+        send_json({"distance_observation": 
+            {
+                "weight": weights[0], 
+                "pose": self.poses[0].tolist(),
+                "left_sensor": left_sensor[0].tolist(),
+                "right_sensor": right_sensor[0].tolist(),
+                "left_distance": self.distance_sensors.left,
+                "right_distance": self.distance_sensors.right
+            }
+        })
         self.pc_observe_distance_sensors.stop()
         return weights
 
