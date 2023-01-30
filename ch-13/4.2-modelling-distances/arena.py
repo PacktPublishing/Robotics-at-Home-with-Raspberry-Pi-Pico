@@ -9,6 +9,8 @@ height = 1500
 cutout_width = 500
 cutout_height = 500
 
+low_probability = 10 ** -10
+
 boundary_lines = [
     [(0,0), (0, height)],
     [(0, height), (width, height)],

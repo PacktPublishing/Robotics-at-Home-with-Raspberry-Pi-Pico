@@ -82,24 +82,6 @@ class Simulation:
         self.alpha_trans = 0.05
         self.alpha_trans_rot = 0.01
 
-
-    def resample(self, weights, sample_count):
-        """Return sample_count number of samples from the
-        poses, based on the weights array.
-        Uses low variance resampling"""
-        samples = np.zeros((sample_count, 3))
-        interval = 1 / sample_count
-        shift = random.uniform(0, interval)
-        cumulative_weights = weights[0]
-        source_index = 0
-        for current_index in range(sample_count):
-            weight_index = shift + current_index * interval
-            while weight_index > cumulative_weights:
-                source_index += 1
-                cumulative_weights += weights[source_index]
-            samples[current_index] = self.poses[source_index]
-        return samples
-
     def convert_odometry_to_motion(self, left_encoder_delta, right_encoder_delta):
         """
         left_encoder is the change in the left encoder
@@ -165,11 +147,26 @@ class Simulation:
     def observation_model(self):
         weights = np.ones(self.poses.shape[0], dtype=np.float)
         for index, pose in enumerate(self.poses):
-            if not arena.contains(pose[:1], pose[:2]):
-                weights[index] = 0.01
-        weights = weights / np.sum(weights)
+            if not arena.contains(pose[0], pose[1]):
+                weights[index] = arena.low_probability
         return weights
 
+    def resample(self, weights, sample_count):
+        """Return sample_count number of samples from the
+        poses, based on the weights array.
+        Uses low variance resampling"""
+        samples = np.zeros((sample_count, 3))
+        interval = np.sum(weights) / sample_count
+        shift = random.uniform(0, interval)
+        cumulative_weights = weights[0]
+        source_index = 0
+        for current_index in range(sample_count):
+            weight_index = shift + current_index * interval
+            while weight_index > cumulative_weights:
+                source_index += 1
+                cumulative_weights += weights[source_index]
+            samples[current_index] = self.poses[source_index]
+        return samples
     async def main(self):
         asyncio.create_task(self.distance_sensors.main())
         collision_avoider = asyncio.create_task(self.collision_avoider.main())
