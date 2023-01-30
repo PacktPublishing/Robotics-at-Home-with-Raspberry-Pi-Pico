@@ -144,31 +144,24 @@ class Simulation:
             )
         )
 
+
+    def get_sensor_endpoints(self, sensor_reading, right=False):
+        # Sensor triangle
+        adjacent = sensor_reading + robot.dist_forward_mm
+        angle = np.atan(robot.dist_side_mm / adjacent)
+        if right:
+            angle = - angle
+        hypotenuse = np.sqrt(robot.dist_side_mm**2 + adjacent**2)
+        # sensor endpoints
+        pose_angles = np.radians(self.poses[:,2]) + angle
+        sensor_endpoints = np.zeros((self.poses.shape[0], 2), dtype=np.float)
+        sensor_endpoints[:,0] = self.poses[:,0] + hypotenuse * np.cos(pose_angles)
+        sensor_endpoints[:,1] = self.poses[:,1] + hypotenuse * np.sin(pose_angles)
+        return sensor_endpoints
+
     def observe_distance_sensors(self, weights):
-        # Sensor triangle left
-        opposite = self.distance_sensors.left + robot.dist_forward_mm
-        adjacent = robot.dist_side_mm
-        left_angle = np.atan(opposite / adjacent)
-        left_hypotenuse = np.sqrt(opposite**2 + adjacent**2)
-        # Sensor triangle right
-        opposite = self.distance_sensors.right + robot.dist_forward_mm
-        adjacent = robot.dist_side_mm
-        right_angle = np.atan(opposite / adjacent)
-        right_hypotenuse = np.sqrt(opposite**2 + adjacent**2)
-
-        # modify the current weights based on the distance sensors
-        left_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
-        right_sensor = np.zeros((self.poses.shape[0], 2), dtype=np.float)
-        
-        # left sensor
-        poses_left_angle = np.radians(self.poses[:, 2]) + left_angle
-        left_sensor[:, 0] = self.poses[:, 0] + np.cos(poses_left_angle) * left_hypotenuse
-        left_sensor[:, 1] = self.poses[:, 1] + np.sin(poses_left_angle) * left_hypotenuse
-
-        # right sensor
-        poses_right_angle = np.radians(self.poses[:, 2]) - right_angle
-        right_sensor[:, 0] = self.poses[:, 0] + np.cos(poses_right_angle) * right_hypotenuse
-        right_sensor[:, 1] = self.poses[:, 1] + np.sin(poses_right_angle) * right_hypotenuse
+        left_sensor = self.get_sensor_endpoints(self.distance_sensors.left)
+        right_sensor = self.get_sensor_endpoints(self.distance_sensors.right, True)
 
         # Look up the distance in the arena
         for index in range(self.poses.shape[0]):
@@ -180,7 +173,7 @@ class Simulation:
     def observation_model(self):
         weights = np.ones(self.poses.shape[0], dtype=np.float)
         for index, pose in enumerate(self.poses):
-            if not arena.contains(pose[:1], pose[:2]):
+            if not arena.contains(pose[0], pose[1]):
                 weights[index] = arena.low_probability
         weights = self.observe_distance_sensors(weights)
         return weights

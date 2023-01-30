@@ -197,6 +197,7 @@ class Simulation:
         send_json({"distance_observation": 
             {
                 "weight": weights[pick], 
+                "index": pick,                
                 "pose": self.poses[pick].tolist(),
                 "left_sensor": left_sensor[pick].tolist(),
                 "right_sensor": right_sensor[pick].tolist(),
@@ -211,8 +212,16 @@ class Simulation:
         self.pc_observation_model.start()
         weights = np.ones(self.poses.shape[0], dtype=np.float)
         for index, pose in enumerate(self.poses):
-            if not arena.contains(pose[:0], pose[:1]):
+            if not arena.contains(pose[0], pose[1]):
                 weights[index] = arena.low_probability
+        pick = np.argmax(weights)
+        send_json({"arena_observation": 
+            {
+                "weight": weights[pick],
+                "index": pick,
+                "pose": self.poses[pick].tolist(),
+            }
+        })        
         weights = self.observe_distance_sensors(weights)
         self.pc_observation_model.stop()
         return weights
