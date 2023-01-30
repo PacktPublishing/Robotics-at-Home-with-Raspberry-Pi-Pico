@@ -35,7 +35,7 @@ def contains(x, y):
 
 
 grid_cell_size = 50
-overscan = 2 # 2 each way
+overscan = 10 # 2 each way
 
 
 def get_distance_to_segment(x, y, segment):
@@ -67,7 +67,7 @@ def get_distance_likelihood(x, y):
         distance = get_distance_to_segment(x, y, segment)
         if min_distance is None or distance < min_distance:
             min_distance = distance
-    return 1.0 / (1 + min_distance/100) ** 2
+    return 1.0 / (1 + min_distance/250) ** 2
 
 
 # beam endpoint model
