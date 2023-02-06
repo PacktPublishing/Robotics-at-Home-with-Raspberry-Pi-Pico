@@ -49,12 +49,12 @@ def send_json(data):
 
 def read_json():
     try:
-      data = robot.uart.readline()
-      decoded = data.decode()
-      return json.loads(decoded)
+        data = robot.uart.readline()
+        decoded = data.decode()
+        return json.loads(decoded)
     except (UnicodeError, ValueError):
-      print("Invalid data")
-      return None
+        print("Invalid data")
+        return None
 
 
 def send_poses(samples):
@@ -77,10 +77,10 @@ class Simulation:
         self.collision_avoider = CollisionAvoid(self.distance_sensors)
         self.last_encoder_left = robot.left_encoder.read()
         self.last_encoder_right = robot.right_encoder.read()
-        self.alpha_rot = 0.05
-        self.alpha_rot_trans = 0.01
-        self.alpha_trans = 0.05
-        self.alpha_trans_rot = 0.01
+        self.alpha_rot = 0.09
+        self.alpha_rot_trans = 0.05
+        self.alpha_trans = 0.12
+        self.alpha_trans_rot = 0.05
 
     def convert_odometry_to_motion(self, left_encoder_delta, right_encoder_delta):
         """

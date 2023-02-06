@@ -11,12 +11,12 @@ def send_json(data):
 
 def read_json():
     try:
-      data = robot.uart.readline()
-      decoded = data.decode()
-      return json.loads(decoded)
+        data = robot.uart.readline()
+        decoded = data.decode()
+        return json.loads(decoded)
     except (UnicodeError, ValueError):
-      print("Invalid data")
-      return None
+        print("Invalid data")
+        return None
 
 
 def send_poses(samples):
@@ -27,14 +27,14 @@ def send_poses(samples):
 
 class Simulation:
     def __init__(self):
-      self.population_size = 20
-      self.poses = np.array(
-          [(
-              int(random.uniform(0, arena.width)),
-              int(random.uniform(0, arena.height)),
-              int(random.uniform(0, 360))) for _ in range(self.population_size)],
-          dtype=np.float,
-      )
+        self.population_size = 20
+        self.poses = np.array(
+            [(
+                int(random.uniform(0, arena.width)),
+                int(random.uniform(0, arena.height)),
+                int(random.uniform(0, 360))) for _ in range(self.population_size)],
+            dtype=np.float,
+        )
 
 
 

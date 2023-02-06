@@ -2,6 +2,7 @@ import asyncio
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Button
 
 from robot_ble_connection import BleConnection
 
@@ -43,15 +44,22 @@ class RobotDisplay:
         if self.poses is not None:
             self.axes.scatter(self.poses[:,0], self.poses[:,1], color="blue")
 
+    async def send_command(self, command):
+        request = (json.dumps({"command": command})  ).encode()
+        print(f"Sending request: {request}")
+        await self.ble_connection.send_uart_data(request)
+
+    def start(self, _):
+        self.button_task = asyncio.create_task(self.send_command("start"))
+
     async def main(self):
         plt.ion()
         await self.ble_connection.connect()
         try:
-            request = json.dumps({"command": "arena"}).encode()
-            print(f"Sending request for arena: {request}")
-            await self.ble_connection.send_uart_data(request)
+            await self.send_command("arena")
             self.fig.canvas.mpl_connect("close_event", self.handle_close)
-
+            start_button = Button(plt.axes([0.7, 0.05, 0.1, 0.075]), "Start")
+            start_button.on_clicked(self.start)
             while not self.closed:
                 self.draw()
                 plt.draw()

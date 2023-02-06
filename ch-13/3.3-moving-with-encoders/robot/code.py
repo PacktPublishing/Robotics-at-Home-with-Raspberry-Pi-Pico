@@ -47,12 +47,12 @@ def send_json(data):
 
 def read_json():
     try:
-      data = robot.uart.readline()
-      decoded = data.decode()
-      return json.loads(decoded)
+        data = robot.uart.readline()
+        decoded = data.decode()
+        return json.loads(decoded)
     except (UnicodeError, ValueError):
-      print("Invalid data")
-      return None
+        print("Invalid data")
+        return None
 
 
 def send_poses(samples):

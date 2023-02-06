@@ -49,12 +49,12 @@ def send_json(data):
 
 def read_json():
     try:
-      data = robot.uart.readline()
-      decoded = data.decode()
-      return json.loads(decoded)
+        data = robot.uart.readline()
+        decoded = data.decode()
+        return json.loads(decoded)
     except (UnicodeError, ValueError):
-      print("Invalid data")
-      return None
+        print("Invalid data")
+        return None
 
 
 def send_poses(samples):
@@ -192,6 +192,7 @@ class Simulation:
             while weight_index > cumulative_weights:
                 source_index += 1
                 cumulative_weights += weights[source_index]
+                source_index = min(len(weights) - 1, source_index)
             samples[current_index] = self.poses[source_index]
         return samples
     async def main(self):
