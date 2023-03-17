@@ -86,3 +86,8 @@ He has been a professional Python programmer since 2009, and a software engineer
 
 ## Other books by the authors
 * [Learn Robotics Programming - Second Edition](https://www.packtpub.com/product/learn-robotics-programming-second-edition/9781839218804?utm_source=github&utm_medium=repository&utm_campaign=9781839218804)
+
+### Download a free PDF
+
+ <i>If you have already purchased a print or Kindle version of this book, you can get a DRM-free PDF version at no cost.<br>Simply click on the link to claim your free PDF.</i>
+<p align="center"> <a href="https://packt.link/free-ebook/9781803246079">https://packt.link/free-ebook/9781803246079 </a> </p>
